@@ -20,5 +20,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Script
+
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          
         run: |
           python stock_scan.py
