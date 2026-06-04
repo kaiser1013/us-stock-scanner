@@ -1,28 +1,32 @@
-name: Stock Scanner
+name: Daily Stock Scan
 
 on:
-  schedule:
-    - cron: "0 21 * * 1-5"
   workflow_dispatch:
 
+  schedule:
+    - cron: "30 21 * * 1-5"
+
 jobs:
-  run:
+  scan:
+
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
+      - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: pip install yfinance pandas numpy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    - name: Run scanner
-      env:
-        EMAIL_USER: ${{ secrets.EMAIL_USER }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        EMAIL_TO: ${{ secrets.EMAIL_TO }}
-      run: python scanner.py
+      - name: Install packages
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run scanner
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          python scanner.py
