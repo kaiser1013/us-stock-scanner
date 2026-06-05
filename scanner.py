@@ -48,7 +48,9 @@ import pandas as pd
 from io import StringIO
 
 def get_sp500_tickers():
+    try:
 
+    # Wikipedia 版本
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
     headers = {
@@ -79,6 +81,17 @@ def get_sp500_tickers():
     ]
 
     return tickers
+
+except Exception as e:
+
+    print(f"Failed loading S&P500 list: {e}")
+
+    return [
+
+            "AAPL","MSFT","NVDA","AMZN","META",
+
+            "GOOGL","AVGO","AMD","TSLA","PLTR"
+    ]
 # =====================================
 # 分析股票
 # =====================================
