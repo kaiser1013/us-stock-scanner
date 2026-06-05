@@ -3,3 +3,5 @@ numpy
 yfinance
 openpyxl
 ta
+requests
+lxml
