@@ -338,6 +338,12 @@ def main():
 
     top20 = df.head(20)
 
+    top20.insert(
+        0,
+        "Rank",
+        range(1, len(top20) + 1)
+    )
+
     print(top20)
 
     print(f"Passed stocks: {len(df)}")
