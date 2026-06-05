@@ -14,9 +14,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
+# =====================================
+
+# 掃描模式
 
 # =====================================
-# 股票池（第一版先保留）
+
+USE_SP500 = False
+
+# =====================================
+# 測試股票池
 # =====================================
 
 TICKERS = [
@@ -32,6 +39,25 @@ TICKERS = [
     "NFLX"
 ]
 
+# =====================================
+# S&P500 股票池
+# =====================================
+
+def get_sp500_tickers():
+
+    table = pd.read_html(
+        "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    )[0]
+
+    tickers = table["Symbol"].tolist()
+
+    # Yahoo Finance 格式
+    tickers = [
+        ticker.replace(".", "-")
+        for ticker in tickers
+    ]
+
+    return tickers
 
 # =====================================
 # 分析股票
@@ -272,7 +298,23 @@ def main():
 
     results = []
 
-    for ticker in TICKERS:
+    if USE_SP500:
+
+        tickers = get_sp500_tickers()
+
+        print(
+            f"Loaded {len(tickers)} S&P500 stocks"
+        )
+
+    else:
+
+        tickers = TICKERS
+
+        print(
+            f"Loaded {len(tickers)} test stocks"
+        )
+
+    for ticker in tickers:
 
         print(f"Processing {ticker}")
 
