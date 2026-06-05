@@ -20,7 +20,7 @@ from email import encoders
 
 # =====================================
 
-USE_SP500 = True
+USE_SP500 = False
 
 # =====================================
 # 測試股票池
@@ -108,6 +108,10 @@ def analyze_stock(ticker):
         progress=False
         )
 
+        if df.empty:
+            print(f"{ticker}: No data")
+            return None
+            
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
     
@@ -120,6 +124,8 @@ def analyze_stock(ticker):
 
         avg_volume = volume.rolling(20).mean().iloc[-1]
 
+        if avg_volume <= 0:
+            return None
         if pd.isna(ma20) or pd.isna(avg_volume):
             return None
 
@@ -322,6 +328,7 @@ def send_email(subject, body, attachment):
 # Main
 # =====================================
 
+import time
 def main():
 
     print("Scanning stocks...")
@@ -356,6 +363,10 @@ def main():
 
             results.append(result)
 
+        # 避免 Yahoo Finance rate limit
+
+        time.sleep(0.5)
+            
     if len(results) == 0:
 
         print("No stocks passed filters")
