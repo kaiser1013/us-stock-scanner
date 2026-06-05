@@ -42,16 +42,16 @@ def analyze_stock(ticker):
     try:
 
         df = yf.download(
-            ticker,
-            period="6mo",
-            interval="1d",
-            auto_adjust=True,
-            progress=False
+        ticker,
+        period="6mo",
+        interval="1d",
+        auto_adjust=True,
+        progress=False
         )
 
-        if df.empty or len(df) < 50:
-            return None
-
+        if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    
         close = df["Close"]
         volume = df["Volume"]
 
@@ -260,7 +260,7 @@ def send_email(subject, body, attachment):
 # Main
 # =====================================
 
-def main():
+    def main():
 
     print("Scanning stocks...")
 
@@ -268,9 +268,14 @@ def main():
 
     for ticker in TICKERS:
 
+        print(f"Processing {ticker}")
+
         result = analyze_stock(ticker)
 
         if result:
+
+            print(f"{ticker} passed filter")
+
             results.append(result)
 
     if len(results) == 0:
