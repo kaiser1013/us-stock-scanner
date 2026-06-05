@@ -3,11 +3,20 @@ import smtplib
 import pandas as pd
 import yfinance as yf
 
+from datetime import datetime
+
+from ta.momentum import RSIIndicator
+from ta.trend import MACD
+from ta.volatility import BollingerBands
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+
 
 # =====================================
-# 股票池（可自行增加）
+# 股票池（第一版先保留）
 # =====================================
 
 TICKERS = [
@@ -23,97 +32,171 @@ TICKERS = [
     "NFLX"
 ]
 
+
 # =====================================
-# 評分函數
+# 分析股票
 # =====================================
 
-def score_stock(ticker):
+def analyze_stock(ticker):
 
     try:
+
         df = yf.download(
             ticker,
-            period="3mo",
+            period="6mo",
             interval="1d",
             auto_adjust=True,
             progress=False
         )
 
-        if len(df) < 30:
+        if df.empty or len(df) < 50:
             return None
 
         close = df["Close"]
         volume = df["Volume"]
 
-        ma20 = close.rolling(20).mean()
+        current_price = float(close.iloc[-1])
 
-        current_price = close.iloc[-1]
-
-        momentum_5d = (
-            current_price / close.iloc[-6] - 1
-        )
-
-        trend = (
-            current_price / ma20.iloc[-1] - 1
-        )
+        ma20 = close.rolling(20).mean().iloc[-1]
 
         avg_volume = volume.rolling(20).mean().iloc[-1]
 
-        volume_ratio = (
-            volume.iloc[-1] / avg_volume
-            if avg_volume > 0 else 1
+        if pd.isna(ma20) or pd.isna(avg_volume):
+            return None
+
+        volume_ratio = float(volume.iloc[-1] / avg_volume)
+
+        # ==========================
+        # 第一層過濾
+        # ==========================
+
+        if current_price < 5:
+            return None
+
+        if avg_volume < 500000:
+            return None
+
+        if current_price < ma20:
+            return None
+
+        if volume_ratio < 1.2:
+            return None
+
+        # ==========================
+        # RSI
+        # ==========================
+
+        rsi = float(
+            RSIIndicator(close=close)
+            .rsi()
+            .iloc[-1]
         )
 
-        score = (
-            momentum_5d * 40 +
-            trend * 40 +
-            (volume_ratio - 1) * 20
+        # ==========================
+        # MACD
+        # ==========================
+
+        macd = MACD(close)
+
+        macd_line = float(
+            macd.macd().iloc[-1]
         )
+
+        signal_line = float(
+            macd.macd_signal().iloc[-1]
+        )
+
+        # ==========================
+        # Bollinger
+        # ==========================
+
+        bb = BollingerBands(close)
+
+        middle_band = float(
+            bb.bollinger_mavg().iloc[-1]
+        )
+
+        # ==========================
+        # Score
+        # ==========================
+
+        score = 0
+
+        if current_price > ma20:
+            score += 20
+
+        if volume_ratio > 1.2:
+            score += 20
+
+        if rsi > 50:
+            score += 20
+
+        if macd_line > signal_line:
+            score += 20
+
+        if current_price > middle_band:
+            score += 20
 
         return {
             "Ticker": ticker,
-            "Score": round(score, 2),
-            "Price": round(float(current_price), 2),
-            "Momentum": round(momentum_5d * 100, 2),
-            "Trend": round(trend * 100, 2),
-            "VolumeRatio": round(volume_ratio, 2)
+            "Score": score,
+            "Price": round(current_price, 2),
+            "RSI": round(rsi, 2),
+            "VolumeRatio": round(volume_ratio, 2),
+            "MA20": round(float(ma20), 2)
         }
 
     except Exception as e:
+
         print(f"Error processing {ticker}: {e}")
+
         return None
+
+
+# =====================================
+# Excel
+# =====================================
+
+def export_excel(df):
+
+    today = datetime.today().strftime("%Y%m%d")
+
+    filename = f"stock_scan_{today}.xlsx"
+
+    df.to_excel(
+        filename,
+        index=False
+    )
+
+    return filename
 
 
 # =====================================
 # Email內容
 # =====================================
 
-def build_email_body(top3_df):
+def build_email_body(df):
 
     body = """
-🔥 DAILY TOP 3 STOCK PICKS
+📈 DAILY STOCK SCANNER
 
-以下為今日評分最高股票：
+Top Candidates
 
 """
 
-    rank = 1
-
-    for _, row in top3_df.iterrows():
+    for idx, row in enumerate(df.itertuples(), start=1):
 
         body += f"""
-#{rank} {row['Ticker']}
+#{idx} {row.Ticker}
 
-Price: ${row['Price']}
-Score: {row['Score']}
-5D Momentum: {row['Momentum']}%
-Trend vs MA20: {row['Trend']}%
-Volume Ratio: {row['VolumeRatio']}
+Score: {row.Score}
+Price: ${row.Price}
+RSI: {row.RSI}
+Volume Ratio: {row.VolumeRatio}
 
---------------------------------
+----------------------------
 
 """
-
-        rank += 1
 
     body += "\nGenerated by GitHub Actions"
 
@@ -121,10 +204,10 @@ Volume Ratio: {row['VolumeRatio']}
 
 
 # =====================================
-# 發送Email
+# Email
 # =====================================
 
-def send_email(subject, body):
+def send_email(subject, body, attachment):
 
     email_user = os.environ["EMAIL_USER"]
     email_password = os.environ["EMAIL_PASSWORD"]
@@ -136,17 +219,45 @@ def send_email(subject, body):
     msg["To"] = email_to
     msg["Subject"] = subject
 
-    msg.attach(MIMEText(body, "plain"))
+    msg.attach(
+        MIMEText(body, "plain")
+    )
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(email_user, email_password)
+    with open(attachment, "rb") as file:
+
+        part = MIMEBase(
+            "application",
+            "octet-stream"
+        )
+
+        part.set_payload(file.read())
+
+    encoders.encode_base64(part)
+
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename={attachment}"
+    )
+
+    msg.attach(part)
+
+    with smtplib.SMTP_SSL(
+        "smtp.gmail.com",
+        465
+    ) as server:
+
+        server.login(
+            email_user,
+            email_password
+        )
+
         server.send_message(msg)
 
     print("Email sent successfully")
 
 
 # =====================================
-# 主程式
+# Main
 # =====================================
 
 def main():
@@ -157,33 +268,36 @@ def main():
 
     for ticker in TICKERS:
 
-        result = score_stock(ticker)
+        result = analyze_stock(ticker)
 
         if result:
             results.append(result)
 
     if len(results) == 0:
-        print("No data found")
+
+        print("No stocks passed filters")
+
         return
 
     df = pd.DataFrame(results)
 
-    top3 = (
-        df.sort_values(
-            by="Score",
-            ascending=False
-        )
-        .head(3)
+    df = df.sort_values(
+        by="Score",
+        ascending=False
     )
 
-    print("\nTop 3 Stocks")
-    print(top3)
+    top20 = df.head(20)
 
-    email_body = build_email_body(top3)
+    print(top20)
+
+    excel_file = export_excel(top20)
+
+    email_body = build_email_body(top20)
 
     send_email(
-        "📈 Daily Top 3 Stock Picks",
-        email_body
+        "📈 Daily Stock Scanner Top 20",
+        email_body,
+        excel_file
     )
 
 
