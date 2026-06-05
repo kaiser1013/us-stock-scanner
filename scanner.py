@@ -46,7 +46,8 @@ TICKERS = [
 def get_sp500_tickers():
 
     table = pd.read_html(
-        "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
+    flavor="lxml"
     )[0]
 
     tickers = table["Symbol"].tolist()
