@@ -20,7 +20,7 @@ from email import encoders
 
 # =====================================
 
-USE_SP500 = False
+USE_SP500 = True
 
 # =====================================
 # 測試股票池
@@ -80,9 +80,6 @@ def analyze_stock(ticker):
     
         close = df["Close"]
         volume = df["Volume"]
-
-        print(type(close))
-        print(close.tail())
 
         current_price = float(close.iloc[-1])
 
