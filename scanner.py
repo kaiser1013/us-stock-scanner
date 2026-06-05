@@ -50,10 +50,13 @@ def analyze_stock(ticker):
         )
 
         if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
+            df.columns = df.columns.get_level_values(0)
     
         close = df["Close"]
         volume = df["Volume"]
+
+        print(type(close))
+        print(close.tail())
 
         current_price = float(close.iloc[-1])
 
@@ -260,7 +263,7 @@ def send_email(subject, body, attachment):
 # Main
 # =====================================
 
-    def main():
+def main():
 
     print("Scanning stocks...")
 
