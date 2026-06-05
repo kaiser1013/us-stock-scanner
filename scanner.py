@@ -68,6 +68,15 @@ def analyze_stock(ticker):
             return None
 
         volume_ratio = float(volume.iloc[-1] / avg_volume)
+        
+        print(
+            f"{ticker} | "
+            f"Price={current_price:.2f} | "
+            f"MA20={ma20:.2f} | "
+            f"AvgVol={avg_volume:,.0f} | "
+            f"VolRatio={volume_ratio:.2f}"
+        )
+
 
         # ==========================
         # 第一層過濾
