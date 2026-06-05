@@ -43,23 +43,42 @@ TICKERS = [
 # S&P500 股票池
 # =====================================
 
+import requests
+import pandas as pd
+from io import StringIO
+
 def get_sp500_tickers():
 
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/137.0 Safari/537.36"
+        )
+    }
+
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=30
+    )
+
+    response.raise_for_status()
+
     table = pd.read_html(
-    "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
-    flavor="lxml"
+        StringIO(response.text)
     )[0]
 
     tickers = table["Symbol"].tolist()
 
-    # Yahoo Finance 格式
     tickers = [
         ticker.replace(".", "-")
         for ticker in tickers
     ]
 
     return tickers
-
 # =====================================
 # 分析股票
 # =====================================
