@@ -88,12 +88,6 @@ def analyze_stock(ticker):
         if avg_volume < 500000:
             return None
 
-        if current_price < ma20:
-            return None
-
-        if volume_ratio < 1.2:
-            return None
-
         # ==========================
         # RSI
         # ==========================
@@ -307,10 +301,15 @@ def main():
 
     print(top20)
 
+    print(f"Passed stocks: {len(df)}")
+    print("Creating Excel...")
+
     excel_file = export_excel(top20)
 
     email_body = build_email_body(top20)
-
+    
+    print("Sending Email...")
+    
     send_email(
         "📈 Daily Stock Scanner Top 20",
         email_body,
