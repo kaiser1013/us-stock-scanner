@@ -184,6 +184,15 @@ def analyze_stock(ticker):
         # Score
         # ==========================
 
+        if volume_ratio < 0.7:
+            return None
+
+        if rsi < 40:
+            return None
+
+        if current_price < ma20:
+            return None
+
         score = 0
 
         if current_price > ma20:
@@ -200,6 +209,9 @@ def analyze_stock(ticker):
 
         if current_price > middle_band:
             score += 20
+
+        if score < 60:
+            return None
 
         return {
             "Ticker": ticker,
