@@ -50,48 +50,48 @@ from io import StringIO
 def get_sp500_tickers():
     try:
 
-    # Wikipedia 版本
-    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        # Wikipedia 版本
+        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/137.0 Safari/537.36"
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/137.0 Safari/537.36"
+            )
+        }
+
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=30
         )
-    }
 
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=30
-    )
+        response.raise_for_status()
 
-    response.raise_for_status()
+        table = pd.read_html(
+            StringIO(response.text)
+        )[0]
 
-    table = pd.read_html(
-        StringIO(response.text)
-    )[0]
+        tickers = table["Symbol"].tolist()
 
-    tickers = table["Symbol"].tolist()
+        tickers = [
+            ticker.replace(".", "-")
+            for ticker in tickers
+        ]
 
-    tickers = [
-        ticker.replace(".", "-")
-        for ticker in tickers
-    ]
+        return tickers
 
-    return tickers
+    except Exception as e:
 
-except Exception as e:
+        print(f"Failed loading S&P500 list: {e}")
 
-    print(f"Failed loading S&P500 list: {e}")
-
-    return [
+        return [
 
             "AAPL","MSFT","NVDA","AMZN","META",
 
             "GOOGL","AVGO","AMD","TSLA","PLTR"
-    ]
+        ]
 # =====================================
 # 分析股票
 # =====================================
