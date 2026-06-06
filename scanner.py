@@ -3,6 +3,29 @@ import smtplib
 import pandas as pd
 import yfinance as yf
 
+import time
+
+def safe_download(ticker):
+
+    for i in range(3):
+
+        print(f"{ticker}: attempt {i+1}")
+
+        df = yf.download(
+            ticker,
+            period="6mo",
+            interval="1d",
+            auto_adjust=True,
+            progress=False
+        )
+
+        if df is not None and not df.empty:
+            return df
+
+        time.sleep(1)
+
+    return pd.DataFrame()
+
 from datetime import datetime
 
 from ta.momentum import RSIIndicator
@@ -20,7 +43,7 @@ from email import encoders
 
 # =====================================
 
-USE_SP500 = False
+USE_SP500 = True
 
 # =====================================
 # 測試股票池
@@ -48,50 +71,26 @@ import pandas as pd
 from io import StringIO
 
 def get_sp500_tickers():
+    
     try:
+        url = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv"
 
-        # Wikipedia 版本
-        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        df = pd.read_csv(url)
 
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/137.0 Safari/537.36"
-            )
-        }
+        tickers = df["Symbol"].str.replace(".", "-", regex=False).tolist()
 
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=30
-        )
-
-        response.raise_for_status()
-
-        table = pd.read_html(
-            StringIO(response.text)
-        )[0]
-
-        tickers = table["Symbol"].tolist()
-
-        tickers = [
-            ticker.replace(".", "-")
-            for ticker in tickers
-        ]
+        print(f"Loaded S&P500 list: {len(tickers)} stocks")
 
         return tickers
 
     except Exception as e:
 
-        print(f"Failed loading S&P500 list: {e}")
+        print(f"S&P500 load failed: {e}")
 
-        return [
+        print("Using fallback list")
 
-            "AAPL","MSFT","NVDA","AMZN","META",
-
-            "GOOGL","AVGO","AMD","TSLA","PLTR"
-        ]
+        return TICKERS
+        
 # =====================================
 # 分析股票
 # =====================================
@@ -100,13 +99,7 @@ def analyze_stock(ticker):
 
     try:
 
-        df = yf.download(
-        ticker,
-        period="6mo",
-        interval="1d",
-        auto_adjust=True,
-        progress=False
-        )
+        df = safe_download(ticker)
 
         if df.empty:
             print(f"{ticker}: No data")
@@ -154,11 +147,8 @@ def analyze_stock(ticker):
         # RSI
         # ==========================
 
-        rsi = float(
-            RSIIndicator(close=close)
-            .rsi()
-            .iloc[-1]
-        )
+        rsi = RSIIndicator(close=close, window=14).rsi().iloc[-1]
+        rsi = float(rsi)
 
         # ==========================
         # MACD
@@ -173,6 +163,12 @@ def analyze_stock(ticker):
         signal_line = float(
             macd.macd_signal().iloc[-1]
         )
+
+        macd_line = macd.macd().iloc[-1]
+        signal_line = macd.macd_signal().iloc[-1]
+
+        if pd.isna(macd_line) or pd.isna(signal_line):
+            return None
 
         # ==========================
         # Bollinger
@@ -365,7 +361,7 @@ def main():
 
         # 避免 Yahoo Finance rate limit
 
-        time.sleep(0.5)
+        time.sleep(0.2)
             
     if len(results) == 0:
 
