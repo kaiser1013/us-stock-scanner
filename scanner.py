@@ -138,9 +138,11 @@ def analyze_stock(ticker, market_bull, spy_return):
         # ==========================
 
         if current_price < 20:
+            print(f"{ticker}: Price filter")
             return None
 
         if avg_volume < 1000000:
+            print(f"{ticker}: Volume filter")
             return None
 
         # ==========================
@@ -148,6 +150,7 @@ def analyze_stock(ticker, market_bull, spy_return):
         # ==========================
 
         if current_price < ma20:
+            print(f"{ticker}: Below MA20")
             return None  # 明顯 downtrend 唔要
             
         ma50 = close.rolling(50).mean().iloc[-1]
@@ -188,16 +191,16 @@ def analyze_stock(ticker, market_bull, spy_return):
         # Layer 3: Momentum Confirmation（入場訊號）
         # ==========================
 
-        if rsi < 45:
+        if rsi < 40:
             return None  # 無 momentum
 
-        if rsi > 75:
+        if rsi > 80:
             return None  # 太 overbought（避免追高）
 
-        if volume_ratio < 1.0:
+        if volume_ratio < 0.8:
             return None  # 無資金流入唔要
 
-        if macd_line < signal_line:
+        if macd_line < signal_line-0.1:
             return None
 
         # ==========================
@@ -212,7 +215,7 @@ def analyze_stock(ticker, market_bull, spy_return):
 
         relative_strength = stock_return - spy_return
 
-        if relative_strength < 0:
+        if relative_strength < -5:
             return None
             
         # ==========================
@@ -245,7 +248,14 @@ def analyze_stock(ticker, market_bull, spy_return):
         if current_price > middle_band:
             score += 15
 
-        if score < 60:
+        market_bonus=0
+
+        if market_bull:
+            market_bonus=10
+
+        score+=market_bonus
+
+        if score < 50:
             return None
 
         if score >= 80:
@@ -475,11 +485,6 @@ def main():
         )
     
         return
-
-    else:
-
-        tickers = TICKERS
-        market_bull=True
             
         print(
             f"Loaded {len(tickers)} test stocks"
