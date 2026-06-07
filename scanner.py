@@ -411,36 +411,6 @@ def main():
 
     if USE_SP500:
 
-        if not market_bull:
-
-            print(
-                "Bear market detected"
-            )
-
-            body=f"""
-
-        MARKET STATUS
-
-        🔴 BEAR
-
-        SPY:
-        {spy_price:.2f}
-
-        SPY MA200:
-        {spy_ma200:.2f}
-
-        No swing trades today.
-        
-        """
-
-            send_email(
-                "🔴 Bear Market",
-                body,
-                None
-            )
-
-            return
-
         tickers = get_sp500_tickers()
 
         print(
