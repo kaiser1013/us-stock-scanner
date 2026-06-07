@@ -421,16 +421,23 @@ def main():
         # MARKET REGIME FILTER
         # ==========================
 
-        spy = yf.download("^GSPC", period="1y", progress=False)
-
-        spy_close = spy["Close"]
-
+        spy = yf.download("^GSPC",period="1y",interval="1d",auto_adjust=True,progress=False)
+        if isinstance(spy.columns, pd.MultiIndex):
+            spy.columns = spy.columns.get_level_values(0)
+        
+        spy_close = spy["Close"].squeeze()
+        
         spy_price = float(spy_close.iloc[-1])
-
-        spy_return = (spy_close.iloc[-1]/spy_close.iloc[-63]-1)*100
-
-        spy_ma200 = float(spy_close.rolling(200).mean().iloc[-1])
-
+        
+        spy_return = (
+            spy_close.iloc[-1] /
+            spy_close.iloc[-63] - 1
+        ) * 100
+        
+        spy_ma200 = float(
+            spy_close.rolling(200).mean().iloc[-1]
+        )
+        
         market_bull = spy_price > spy_ma200
 
         print(f"Market Bull: {market_bull}")
