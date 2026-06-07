@@ -95,12 +95,12 @@ def get_sp500_tickers():
 # 分析股票
 # =====================================
 
-def analyze_stock(ticker, market_bull):
+def analyze_stock(ticker, market_bull, spy_return):
 
     # 熊市暫停交易
     if not market_bull:
-    print("Bear market - skip trading")
-    return None
+        print("Bear market - skip trading")
+        return None
     
     try:
 
@@ -117,6 +117,8 @@ def analyze_stock(ticker, market_bull):
         volume = df["Volume"]
 
         current_price = float(close.iloc[-1])
+
+        stock_return = (close.iloc[-1]/close.iloc[-63]-1)*100
 
         ma20 = close.rolling(20).mean().iloc[-1]
 
@@ -154,8 +156,10 @@ def analyze_stock(ticker, market_bull):
 
         if current_price < ma20:
             return None  # 明顯 downtrend 唔要
-
-        if ma20 < close.rolling(50).mean().iloc[-1]:
+            
+        ma50 = close.rolling(50).mean().iloc[-1]
+        
+        if ma20 < ma50:
             return None  # 中期 downtrend
 
         # ==========================
@@ -170,14 +174,6 @@ def analyze_stock(ticker, market_bull):
         # ==========================
 
         macd = MACD(close)
-
-        macd_line = float(
-            macd.macd().iloc[-1]
-        )
-
-        signal_line = float(
-            macd.macd_signal().iloc[-1]
-        )
 
         macd_line = macd.macd().iloc[-1]
         signal_line = macd.macd_signal().iloc[-1]
@@ -212,27 +208,42 @@ def analyze_stock(ticker, market_bull):
             return None
 
         # ==========================
+        # Relative Strength
+        # ==========================
+
+        stock_return = (
+            close.iloc[-1]
+            / close.iloc[-63]
+            - 1
+        ) * 100
+
+        relative_strength = stock_return - spy_return
+
+        if relative_strength < 0:
+            return None
+            
+        # ==========================
         # Score
         # ==========================
 
-        if volume_ratio < 0.7:
-            return None
-
-        if rsi < 40:
-            return None
-
-        if current_price < ma20:
-            return None
-
         score = 0
 
+        if relative_strength > 20:
+            score += 20
+        
+        elif relative_strength > 10:
+            score += 15
+
+        elif relative_strength > 0:
+            score += 10
+        
         if current_price > ma20:
             score += 25
-
+        
         if volume_ratio > 1.5:
             score += 20
-
-        if rsi > 50 and rsi <70:
+        
+        if 50 < rsi < 70:
             score += 15
 
         if macd_line > signal_line:
@@ -254,11 +265,16 @@ def analyze_stock(ticker, market_bull):
         return {
             "Ticker": ticker,
             "Score": score,
+            "RS": round(relative_strength, 2),
             "Signal": signal,
             "Price": round(current_price, 2),
             "RSI": round(rsi, 2),
             "VolumeRatio": round(volume_ratio, 2),
             "MA20": round(float(ma20), 2)
+            "MA50": round(ma50,2),
+            "MACD": round(macd_line,2),
+            "SignalLine": round(signal_line,2),
+            "MiddleBB": round(middle_band,2)
         }
 
     except Exception as e:
@@ -290,8 +306,31 @@ def export_excel(df):
 # Email內容
 # =====================================
 
-def build_email_body(df):
+def build_email_body(
+    df,
+    market_bull,
+    spy_price,
+    spy_ma200
+):
+    market_status = "🟢 BULL" if market_bull else "🔴 BEAR"
 
+    body = f"""
+    MARKET STATUS
+
+    {market_status}
+
+    SPY:
+    {spy_price:.2f}
+
+    SPY MA200:
+    {spy_ma200:.2f}
+
+    Passed:
+    {len(df)}
+
+    ====================
+
+    """
     body = "📈 DAILY TRADE SIGNALS\n\n"
 
     for row in df.itertuples():
@@ -313,7 +352,7 @@ Vol: {row.VolumeRatio}
 
 
 # =====================================
-# Email
+# Send Email
 # =====================================
 
 def send_email(subject, body, attachment):
@@ -331,8 +370,14 @@ def send_email(subject, body, attachment):
     msg.attach(
         MIMEText(body, "plain")
     )
+    if attachment:
 
-    with open(attachment, "rb") as file:
+        with open(
+            attachment,
+            "rb"
+        ) as file:
+
+            ...
 
         part = MIMEBase(
             "application",
@@ -392,6 +437,10 @@ def main():
 
         spy_close = spy["Close"]
 
+        spy_price = float(spy_close.iloc[-1])
+
+        spy_return = (spy_close.iloc[-1]/spy_close.iloc[-63]-1)*100
+
         spy_ma200 = spy_close.rolling(200).mean().iloc[-1]
 
         market_bull = spy_close.iloc[-1] > spy_ma200
@@ -401,7 +450,38 @@ def main():
     else:
 
         tickers = TICKERS
+        market_bull=True
 
+        if not market_bull:
+
+            print(
+                "Bear market detected"
+            )
+
+            body=f"""
+
+        MARKET STATUS
+
+        🔴 BEAR
+
+        SPY:
+        {spy_price:.2f}
+
+        SPY MA200:
+        {spy_ma200:.2f}
+
+        No swing trades today.
+        
+        """
+
+            send_email(
+                "🔴 Bear Market",
+                body,
+                None
+            )
+
+            return
+            
         print(
             f"Loaded {len(tickers)} test stocks"
         )
@@ -410,7 +490,7 @@ def main():
 
         print(f"Processing {ticker}")
 
-        result = analyze_stock(ticker)
+        result = analyze_stock(ticker, market_bull, spy_return)
 
         if result:
 
@@ -437,6 +517,8 @@ def main():
 
     trades = df[df["Signal"] == "🔥 STRONG BUY"]
 
+    top20=trades.head(20)
+
     top20.insert(
         0,
         "Rank",
@@ -450,7 +532,12 @@ def main():
 
     excel_file = export_excel(top20)
 
-    email_body = build_email_body(top20)
+    email_body = build_email_body(
+        top20,
+        market_bull,
+        spy_price,
+        spy_ma200
+    )
     
     print("Sending Email...")
     
