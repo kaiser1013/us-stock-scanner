@@ -1,3 +1,35 @@
+Scanner
+
+Version 2.0
+
+2026-06-16
+
+Features:
+
+MA20
+
+MA50
+
+RSI
+
+Volume
+
+Breakout
+
+Market Filter
+
+--------------
+
+Dev
+
+Version 2.1
+
+ATR
+
+Sector Rotation
+
+Relative Strength
+
 # Daily Stock Scanner
 
 自動選出每日最強 3 隻美股並透過 Email 發送結果。
