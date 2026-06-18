@@ -5,32 +5,54 @@ import yfinance as yf
 
 import time
 
+def safe_last(series):
+    if series is None or len(series) == 0:
+        return None
+    v = series.iloc[-1]
+    return None if pd.isna(v) else float(v)
+
 def safe_download(ticker):
-
     for i in range(3):
+        try:
+            print(f"{ticker}: attempt {i+1}")
 
-        print(f"{ticker}: attempt {i+1}")
+            df = yf.download(
+                ticker,
+                period="1y",   # 🔥 改大 window（重要）
+                interval="1d",
+                auto_adjust=True,
+                progress=False
+            )
 
-        df = yf.download(
-            ticker,
-            period="6mo",
-            interval="1d",
-            auto_adjust=True,
-            progress=False
-        )
+            if df is None or df.empty:
+                continue
+           
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
 
-        if df is not None and not df.empty:
+            if "Close" not in df.columns:
+                print(f"{ticker}: Missing Close")
+                continue
+
+            if df["Close"].isna().all():
+                print(f"{ticker}: ALL Close NaN")
+                continue
+
             return df
+
+        except Exception as e:
+            print(f"{ticker} download error: {e}")
 
         time.sleep(1)
 
-    return pd.DataFrame()
+    return None
 
 from datetime import datetime
 
 from ta.momentum import RSIIndicator
 from ta.trend import MACD
 from ta.volatility import BollingerBands
+from ta.trend import ADXIndicator
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -101,29 +123,45 @@ def analyze_stock(ticker, market_bull, spy_return):
 
         df = safe_download(ticker)
 
-        if df.empty:
+        if df is None or df.empty:
             print(f"{ticker}: No data")
             return None
-            
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-    
+
         close = df["Close"]
+
+        if close.isna().all():
+            print(f"{ticker}: Close all NaN")
+            return None
+
+        if len(df) < 210:
+            print(f"{ticker}: insufficient data {len(df)}")
+            return None
+
+        # ==========================
+        # DATA
+        # ==========================
+
+        close = df["Close"]
+        high = df["High"]
+        low = df["Low"]
         volume = df["Volume"]
 
         current_price = float(close.iloc[-1])
-        
-        ma20 = close.rolling(20).mean().iloc[-1]
 
-        avg_volume = volume.rolling(20).mean().iloc[-1]
+        ma20 = safe_last(close.rolling(20).mean())
+        ma50 = safe_last(close.rolling(50).mean())
+        ma200 = safe_last(close.rolling(200).mean())
+        avg_volume = safe_last(volume.rolling(20).mean())
 
         if avg_volume <= 0:
             return None
-        if pd.isna(ma20) or pd.isna(avg_volume):
+
+        if ma20 is None or ma50 is None or ma200 is None or avg_volume is None:
+            print(f"{ticker}: Indicator NaN")
             return None
 
         volume_ratio = float(volume.iloc[-1] / avg_volume)
-        
+
         print(
             f"{ticker} | "
             f"Price={current_price:.2f} | "
@@ -132,9 +170,8 @@ def analyze_stock(ticker, market_bull, spy_return):
             f"VolRatio={volume_ratio:.2f}"
         )
 
-
         # ==========================
-        # Layer 1: Liquidity Filter（流動性）
+        # LAYER 1: LIQUIDITY FILTER
         # ==========================
 
         if current_price < 20:
@@ -146,17 +183,16 @@ def analyze_stock(ticker, market_bull, spy_return):
             return None
 
         # ==========================
-        # Layer 2: Trend Filter（方向）
+        # LAYER 2: TREND FILTER
         # ==========================
 
         if current_price < ma20:
-            print(f"{ticker}: Below MA20")
-            return None  # 明顯 downtrend 唔要
-            
-        ma50 = close.rolling(50).mean().iloc[-1]
-        
+            print(f"{ticker}: Price Below MA20")
+            return None
+
         if ma20 < ma50:
-            return None  # 中期 downtrend
+            print(f"{ticker}: MA20 below MA50")
+            return None
 
         # ==========================
         # RSI
@@ -175,117 +211,266 @@ def analyze_stock(ticker, market_bull, spy_return):
         signal_line = macd.macd_signal().iloc[-1]
 
         if pd.isna(macd_line) or pd.isna(signal_line):
+            print(f"{ticker}: MACD NaN")
             return None
 
         # ==========================
-        # Bollinger
+        # BOLLINGER
         # ==========================
 
         bb = BollingerBands(close)
 
-        middle_band = float(
-            bb.bollinger_mavg().iloc[-1]
-        )
+        middle_band = float(bb.bollinger_mavg().iloc[-1])
+        upper_band = float(bb.bollinger_hband().iloc[-1])   # FIXED
 
         # ==========================
-        # Layer 3: Momentum Confirmation（入場訊號）
+        # MOMENTUM FILTER
         # ==========================
 
         if rsi < 40:
-            return None  # 無 momentum
+            print(f"{ticker}: RSI too weak")
+            return None
 
         if rsi > 80:
-            return None  # 太 overbought（避免追高）
+            return None
 
         if volume_ratio < 0.8:
-            return None  # 無資金流入唔要
+            print(f"{ticker}: Low volume")
+            return None
 
-        if macd_line < signal_line-0.1:
+        if macd_line < signal_line - 0.1:
             return None
 
         # ==========================
-        # Relative Strength
+        # RELATIVE STRENGTH
         # ==========================
-
+        
+        if len(close)<70:
+            print(f"{ticker}: Insufficient history")
+            return None
+            
         stock_return = (
-            close.iloc[-1]
-            / close.iloc[-63]
-            - 1
+            close.iloc[-1] / close.iloc[-63] - 1
         ) * 100
 
         relative_strength = stock_return - spy_return
 
         if relative_strength < -5:
+            print(f"{ticker}: Weak Relative Strength")
             return None
-            
+
         # ==========================
-        # Score
+        # ADX
         # ==========================
 
+        adx_indicator = ADXIndicator(
+            high=high,
+            low=low,
+            close=close,
+            window=14
+        )
+
+        adx = adx_indicator.adx().iloc[-1]
+        plus_di = adx_indicator.adx_pos().iloc[-1]   # FIXED
+        minus_di = adx_indicator.adx_neg().iloc[-1]  # FIXED
+
+        if pd.isna(adx):
+            adx = 0
+
+        # ==========================
+        # SCORE ENGINE V2.1
+        # ==========================
+        
+        print(f"[MID] {ticker} indicators OK")
+        
         score = 0
 
-        if relative_strength > 20:
-            score += 20
-        
-        elif relative_strength > 10:
-            score += 15
+        # --------------------------
+        # 1. TREND
+        # --------------------------
 
-        elif relative_strength > 0:
-            score += 10
-        
+        trend_score = 0
+
         if current_price > ma20:
-            score += 25
-        
-        if volume_ratio > 1.5:
-            score += 20
-        
-        if 50 < rsi < 70:
-            score += 15
+            trend_score += 10
+
+        if ma20 > ma50:
+            trend_score += 10
+
+        if ma50 > ma200:
+            trend_score += 10
+
+        score += trend_score
+
+        # --------------------------
+        # 2. MOMENTUM
+        # --------------------------
+
+        momentum_score = 0
+
+        if 55 <= rsi <= 65:
+            momentum_score += 10
+
+        elif 50 <= rsi < 55:
+            momentum_score += 7
+
+        elif 65 < rsi <= 70:
+            momentum_score += 5
 
         if macd_line > signal_line:
-            score += 25
+            if macd_line > 0:
+                momentum_score += 10
+            else:
+                momentum_score += 7
 
-        if current_price > middle_band:
-            score += 15
+        score += momentum_score
 
-        market_bonus=0
+        # --------------------------
+        # 3. STRENGTH
+        # --------------------------
+
+        strength_score = 0   # FIXED
+
+        if relative_strength > 30:
+            strength_score = 15
+
+        elif relative_strength > 20:
+            strength_score = 12
+
+        elif relative_strength > 10:
+            strength_score = 8
+
+        elif relative_strength > 5:
+            strength_score = 5
+
+        score += strength_score   # FIXED
+
+        # --------------------------
+        # 4. VOLUME
+        # --------------------------
+
+        volume_score = 0
+
+        if volume_ratio > 2.5:
+            volume_score = 20
+
+        elif volume_ratio > 2.0:
+            volume_score = 18
+
+        elif volume_ratio > 1.5:
+            volume_score = 15
+
+        elif volume_ratio > 1.2:
+            volume_score = 10
+
+        elif volume_ratio > 1.0:
+            volume_score = 5
+
+        score += volume_score
+
+        # --------------------------
+        # 5. MARKET
+        # --------------------------
+
+        market_score = 0
 
         if market_bull:
-            market_bonus=10
+            market_score = 15
 
-        score+=market_bonus
+        score += market_score
 
-        if score < 50:
-            return None
+        # --------------------------
+        # RISK
+        # --------------------------
 
-        if score >= 80:
+        risk_penalty = 0
+
+        if rsi > 75:
+            risk_penalty += 5
+
+        if current_price > upper_band:
+            risk_penalty += 5
+
+        score -= risk_penalty
+
+        # --------------------------
+        # ADX SCORE
+        # --------------------------
+
+        adx_score = 0
+
+        if adx > 25 and plus_di > minus_di:
+            adx_score = 6
+
+        elif adx > 20 and plus_di > minus_di:
+            adx_score = 4
+
+        score += adx_score
+
+        # ==========================
+        # FINAL SCORE LIMIT
+        # ==========================
+
+        score = max(0, min(score, 100))
+
+        # ==========================
+        # SIGNAL
+        # ==========================
+
+        if score >= 90:
             signal = "🔥 STRONG BUY"
-        elif score >= 65:
+
+        elif score >= 80:
+            signal = "🟢 BUY"
+
+        elif score >= 70:
             signal = "🟡 WATCH"
+
+        elif score >= 60:
+            signal = "⚪ MONITOR"
+
         else:
             signal = "NO TRADE"
 
+        # ⚠️ 建議：暫時保留所有結果（方便 ranking）
+        # if score < 60:
+        #     return None  
+        
         return {
+
             "Ticker": ticker,
             "Score": score,
-            "RS": round(relative_strength, 2),
             "Signal": signal,
+
+            "TrendScore": trend_score,
+            "MomentumScore": momentum_score,
+            "StrengthScore": strength_score,
+            "VolumeScore": volume_score,
+            "MarketScore": market_score,
+            "ADXScore": adx_score,
+            "RiskPenalty": risk_penalty,
+
+            "RelativeStrength": round(relative_strength, 2),
+            "ADX": round(adx, 2),
+
             "Price": round(current_price, 2),
             "RSI": round(rsi, 2),
             "VolumeRatio": round(volume_ratio, 2),
-            "MA20": round(float(ma20), 2),
-            "MA50": round(ma50,2),
-            "MACD": round(macd_line,2),
-            "SignalLine": round(signal_line,2),
-            "MiddleBB": round(middle_band,2)
+
+            "MA20": round(ma20, 2),
+            "MA50": round(ma50, 2),
+            "MA200": round(ma200, 2),
+
+            "MACD": round(macd_line, 2),
+            "SignalLine": round(signal_line, 2),
+
+            "MiddleBB": round(middle_band, 2)
+
         }
 
     except Exception as e:
-
         print(f"Error processing {ticker}: {e}")
-
         return None
-
 
 # =====================================
 # Excel
@@ -293,7 +478,7 @@ def analyze_stock(ticker, market_bull, spy_return):
 
 def export_excel(df):
 
-    today = datetime.today().strftime("%Y%m%d")
+    today = datetime.today().strftime("%Y-%m-%d")
 
     filename = f"stock_scan_{today}.xlsx"
 
@@ -318,22 +503,25 @@ def build_email_body(
     market_status = "🟢 BULL" if market_bull else "🔴 BEAR"
 
     body = f"""
-    MARKET STATUS
-
-    {market_status}
-
-    SPY:
-    {spy_price:.2f}
-
-    SPY MA200:
-    {spy_ma200:.2f}
-
-    Passed:
-    {len(df)}
-
-    ====================
-
+    ================================
+    
+    US Stock Scanner v2.1
+    
+    Date: {today}
+    
+    Market Bull: {market_bull}
+    
+    SP500 Stocks: {len(tickers)}
+    
+    Qualified: {len(results)}
+    
+    ================================
+    
+    TOP20
+    
     """
+    body += top20.to_string(index=False)
+    
     body += "📈 DAILY TRADE SIGNALS\n\n"
 
     for row in df.itertuples():
@@ -412,149 +600,156 @@ def send_email(subject, body, attachment):
 # Main
 # =====================================
 
-import time
 def main():
 
     print("Scanning stocks...")
 
     results = []
 
+    tickers = []
+
+    spy_price = None
+    spy_ma200 = None
+    spy_return = 0
+    market_bull = True
+
+    # ==========================
+    # LOAD DATA
+    # ==========================
+
     if USE_SP500:
 
         tickers = get_sp500_tickers()
 
-        print(
-            f"Loaded {len(tickers)} S&P500 stocks"
+        print(f"Loaded {len(tickers)} S&P500 stocks")
+
+        spy = yf.download(
+            "^GSPC",
+            period="1y",
+            interval="1d",
+            auto_adjust=True,
+            progress=False
         )
 
-        # ==========================
-        # MARKET REGIME FILTER
-        # ==========================
-
-        spy = yf.download("^GSPC",period="1y",interval="1d",auto_adjust=True,progress=False)
         if isinstance(spy.columns, pd.MultiIndex):
             spy.columns = spy.columns.get_level_values(0)
-        
+
         spy_close = spy["Close"].squeeze()
-        
+
         spy_price = float(spy_close.iloc[-1])
-        
+
+        spy_ma200 = float(spy_close.rolling(200).mean().iloc[-1])
+
         spy_return = (
             spy_close.iloc[-1] /
             spy_close.iloc[-63] - 1
         ) * 100
-        
-        spy_ma200 = float(
-            spy_close.rolling(200).mean().iloc[-1]
-        )
-        
+
         market_bull = spy_price > spy_ma200
 
         print(f"Market Bull: {market_bull}")
 
+    else:
+
+        print("TEST MODE ENABLED")
+        tickers=TICKERS
+
     # ==========================
-    # Bear Market Protection
+    # BEAR MARKET PROTECTION
     # ==========================
-    
-    if spy_price < spy_ma200:
-    
+
+    if spy_price is not None and spy_price < spy_ma200:
+
         print("Bear market detected")
-    
+
         body = f"""
-    MARKET STATUS
-    
-    🔴 BEAR
-    
-    SPY:
-    {spy_price:.2f}
-    
-    SPY MA200:
-    {spy_ma200:.2f}
-    
-    Market below MA200.
-    
-    No swing trades today.
-    
-    Generated by GitHub Actions.
-    """
-    
+MARKET STATUS
+
+🔴 BEAR
+
+SPY:
+{spy_price:.2f}
+
+SPY MA200:
+{spy_ma200:.2f}
+
+No swing trades today.
+"""
+
         send_email(
-            "🔴 Bear Market Alert",
+            "🔴 Bear Market Alert US Scanner v2.1 {today}",
             body,
             None
         )
-    
+
         return
-            
-        print(
-            f"Loaded {len(tickers)} test stocks"
-        )
+
+    # ==========================
+    # SCAN LOOP
+    # ==========================
 
     for ticker in tickers:
 
         print(f"Processing {ticker}")
 
         result = analyze_stock(ticker, market_bull, spy_return)
-
+        
         if result:
-
-            print(f"{ticker} passed filter")
-
+            print(f"{ticker} scored: {result['Score']:.2f}")
             results.append(result)
+        else:
+            print(f"{ticker} filtered out")
 
-        # 避免 Yahoo Finance rate limit
+        if result is not None:
+            
+            results.append(result)
+    
+            if isinstance(result, dict):
+                print(f"{ticker} scored: {result['Score']:.2f}")
 
         time.sleep(0.2)
-            
-    if len(results)==0:
 
-        body=f"""
-    MARKET STATUS
+    # ==========================
+    # EMPTY RESULT HANDLING
+    # ==========================
 
-    {"🟢 BULL" if market_bull else "🔴 BEAR"}
+    if len(results) == 0:
 
-    SPY:
-    {spy_price:.2f}
+        body = f"""
+MARKET STATUS
 
-    SPY MA200:
-    {spy_ma200:.2f}
+{"🟢 BULL" if market_bull else "🔴 BEAR"}
 
-    No stocks passed today's filters.
+SPY:
+{spy_price}
 
-    Generated by GitHub Actions.
-    """
+SPY MA200:
+{spy_ma200}
+
+No stocks passed analysis (or scoring too strict).
+"""
 
         send_email(
-            "📉 Daily Scanner - No Candidates",
+            "No Candidates US Scanner v2.1 Top20 - {today}",
             body,
             None
         )
 
         return
 
+    # ==========================
+    # DATAFRAME
+    # ==========================
+
     df = pd.DataFrame(results)
 
-    df = df.sort_values(
-        by="Score",
-        ascending=False
-    )
+    df = df.sort_values(by="Score", ascending=False)
 
-    trades = df[df["Signal"] == "🔥 STRONG BUY"]
+    # ==========================
+    # TOP 20 FIX (IMPORTANT)
+    # ==========================
 
-    top20=trades.copy()
-
-    if len(top20)<20:
-
-        watch=df[
-            df["Signal"]=="🟡 WATCH"
-        ]
-    
-        remain=20-len(top20)
-    
-        top20=pd.concat([
-            top20,
-            watch.head(remain)
-        ])
+    top20 = df.head(20).copy()
 
     top20.insert(
         0,
@@ -562,9 +757,15 @@ def main():
         range(1, len(top20) + 1)
     )
 
-    print(top20)
+    print("\nTOP 20 RESULTS:")
+    print(top20[["Rank", "Ticker", "Score", "Signal"]])
 
-    print(f"Passed stocks: {len(df)}")
+    print(f"\nPassed stocks: {len(df)}")
+
+    # ==========================
+    # EXPORT
+    # ==========================
+
     print("Creating Excel...")
 
     excel_file = export_excel(top20)
@@ -575,15 +776,13 @@ def main():
         spy_price,
         spy_ma200
     )
-    
+
     print("Sending Email...")
-    
+
     send_email(
-        "📈 Daily Stock Scanner Top 20",
+        "US Scanner v2.1 Top20 - {today}",
         email_body,
         excel_file
     )
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
