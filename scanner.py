@@ -507,20 +507,23 @@ def build_email_body(
     
     US Stock Scanner v2.1
     
-    Date: {today}
+    Market:
     
-    Market Bull: {market_bull}
+    {market_status}
     
-    SP500 Stocks: {len(tickers)}
+    SPY:
     
-    Qualified: {len(results)}
+    {spy_price:.2f}
+    
+    SPY MA200:
+    
+    {spy_ma200:.2f}
     
     ================================
     
-    TOP20
+    📈 DAILY TRADE SIGNALS
     
     """
-    body += top20.to_string(index=False)
     
     body += "📈 DAILY TRADE SIGNALS\n\n"
 
@@ -677,7 +680,7 @@ No swing trades today.
 """
 
         send_email(
-            "🔴 Bear Market Alert US Scanner v2.1 {today}",
+            "🔴 Bear Market Alert US Scanner v2.1",
             body,
             None
         )
@@ -699,13 +702,6 @@ No swing trades today.
             results.append(result)
         else:
             print(f"{ticker} filtered out")
-
-        if result is not None:
-            
-            results.append(result)
-    
-            if isinstance(result, dict):
-                print(f"{ticker} scored: {result['Score']:.2f}")
 
         time.sleep(0.2)
 
@@ -730,7 +726,7 @@ No stocks passed analysis (or scoring too strict).
 """
 
         send_email(
-            "No Candidates US Scanner v2.1 Top20 - {today}",
+            "No Candidates US Scanner v2.1 Top20",
             body,
             None
         )
@@ -780,7 +776,7 @@ No stocks passed analysis (or scoring too strict).
     print("Sending Email...")
 
     send_email(
-        "US Scanner v2.1 Top20 - {today}",
+        "📈 US Scanner v2.1 Daily Top20",
         email_body,
         excel_file
     )
