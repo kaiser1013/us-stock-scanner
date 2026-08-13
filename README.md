@@ -1,9 +1,3 @@
-我建議你開始建立一個 **CHANGELOG + README.md** 習慣。對於日後 v3、v4，甚至回退 (rollback) 都非常有用。
-
-以下係根據我哋呢幾個星期 development 嘅整理，可以直接放入 GitHub。
-
----
-
 # US Stock Scanner
 
 ## v2.0 Stable
@@ -493,7 +487,7 @@ Planned：
 
 ---
 
-## 🏆 專案里程碑（建議加喺 README 最後）
+## 🏆 專案里程碑
 
 | Version | Status  | Major Achievement                  |
 | ------- | ------- | ---------------------------------- |
