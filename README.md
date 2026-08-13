@@ -497,7 +497,7 @@ Planned：
 | v2.2    | Planned | 模組化 (`download.py`、`indicator.py`) |
 | v3.0    | Planned | 完整 Swing Trading Decision System   |
 
-我另外建議 GitHub 採用一個簡單版本管理規則：
+建議 GitHub 採用一個簡單版本管理規則：
 
 * **main / stable**：v2.1 Stable（每日自動運行）
 * **dev**：v2.2 開發及模組化
