@@ -10,7 +10,7 @@ def classify_signal(score):
     return "❌ NO TRADE"
 
 def calculate_score(metrics, market_bull):
-    """Score Engine v2.3. Final score is capped between 0 and 100."""
+    """Score Engine v2.4. Final score is capped between 0 and 100."""
     score = 0
     
     trend_score = 0
