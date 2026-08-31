@@ -30,16 +30,18 @@ def safe_last(series):
     value = series.iloc[-1]
     return None if pd.isna(value) else float(value)
 
-def _normalise_yfinance_columns(df):
-    """Handle yfinance MultiIndex columns and return standard OHLCV columns."""
+def normalise_yfinance_columns(df):
+    """Flatten yfinance MultiIndex columns into standard OHLCV names."""
     if df is None or df.empty:
         return df
     if isinstance(df.columns, pd.MultiIndex):
+        df = df.copy()
         df.columns = df.columns.get_level_values(0)
     return df
     
 def safe_download(ticker, period="1y", interval="1d", retries=3, sleep_seconds=1):
-    """Download market data with retry, empty-data protection and Close validation."""
+    """Download price data with retry and basic OHLCV validation."""
+    required_columns = {"Close", "High", "Low", "Volume"}
     for attempt in range(retries):
         try:
             print(f"{ticker}: attempt {attempt + 1}")
@@ -50,19 +52,22 @@ def safe_download(ticker, period="1y", interval="1d", retries=3, sleep_seconds=1
                 auto_adjust=True, 
                 progress=False,
             )
-            df = _normalise_yfinance_columns(df)
+            df = normalise_yfinance_columns(df)
             
             if df is None or df.empty:
                 print(f"{ticker}: empty download")
                 continue
-            if "Close" not in df.columns:
-                print(f"{ticker}: Missing Close")
+
+            missing = required_columns.difference(df.columns)
+            if missing:
+                print(f"{ticker}: missing columns {sorted(missing)}")
                 continue
+                
             if df["Close"].isna().all():
-                print(f"{ticker}: ALL Close NaN")
+                print(f"{ticker}: All Close values are NaN")
                 continue
             
-            return df
+            return df.dropna(subset=["Close"]).copy()
         except Exception as error:
             print(f"{ticker} download error: {error}")
         time.sleep(sleep_seconds)
@@ -73,7 +78,7 @@ def safe_download(ticker, period="1y", interval="1d", retries=3, sleep_seconds=1
 # =====================================
 
 def get_sp500_tickers():
-    """Load S&P500 tickers. Fall back to test list if external list fails."""
+    """Load the S&P500 universe, with the test list as failback."""
     try:
         df = pd.read_csv(SP500_URL)
         tickers = df["Symbol"].str.replace(".","-", regex=False).tolist()
@@ -81,34 +86,26 @@ def get_sp500_tickers():
         return tickers
     except Exception as error:
         print(f"S&P500 load failed: {error}")
-        print("Using fallback list")
+        print("Using fallback ticker list")
         return TICKERS
 
 def get_market_context():
-    """Download S&P500 index data and calculate market regime context."""
+    """Calculate the S&P500 market regime and 63-session return."""
     spy = safe_download("^GSPC", period="1y", interval="1d")
     if spy is None or spy.empty:
         raise ValueError("Unable to download market context for ^GSPC")
 
-    spy_close = spy["Close"].squeeze()
+    spy_close = spy["Close"].astype(float)
     if len(spy_close) < 200:
-        raise ValueError("Insufficient market data for MA200")
+        raise ValueError("Insufficient ^GSPC history for MA200")
 
     spy_price = float(spy_close.iloc[-1])
     spy_ma200 = float(spy_close.rolling(200).mean().iloc[-1])
-
-    if pd.isna(spy_ma200):
-        raise ValueError("SPY MA200 is NaN")
-    
-    spy_return = 0
-    if len(spy_close) >= 63:
-        spy_return = (spy_close.iloc[-1] / spy_close.iloc[-63] - 1) * 100
-
-    market_bull = spy_price > spy_ma200
+    spy_return = (spy_close.iloc[-1] / spy_close.iloc[-63] - 1) * 100
 
     return {
         "spy_price": spy_price,
         "spy_ma200": spy_ma200,
         "spy_return": spy_return,
-        "market_bull": market_bull,
+        "market_bull": spy_price > spy_ma200,
     }
