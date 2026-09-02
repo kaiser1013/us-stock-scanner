@@ -39,18 +39,8 @@ def normalise_yfinance_columns(df):
         df.columns = df.columns.get_level_values(0)
     return df
     
-def safe_download(
-    ticker,
-    period="2y",
-    interval="1d",
-    retries=3,
-    sleep_seconds=1,
-):
-    """Download price data with retry and basic OHLCV validation.
-    
-    v2.5 uses two years by default so 252-session relative strength has
-    sufficient history while retaining the v2.4.1 validation behaviour.
-    """
+def safe_download(ticker, period="1y", interval="1d", retries=3, sleep_seconds=1):
+    """Download price data with retry and basic OHLCV validation."""
     required_columns = {"Close", "High", "Low", "Volume"}
     for attempt in range(retries):
         try:
@@ -91,23 +81,13 @@ def get_sp500_tickers():
     """Load the S&P500 universe, with the test list as failback."""
     try:
         df = pd.read_csv(SP500_URL)
-        tickers = (
-            df["Symbol"]
-            .astype(str)
-            .str.replace(".", "-", regex=False)
-            .tolist()
-        )
+        tickers = df["Symbol"].str.replace(".","-", regex=False).tolist()
         print(f"Loaded S&P500 list: {len(tickers)} stocks")
         return tickers
     except Exception as error:
         print(f"S&P500 load failed: {error}")
         print("Using fallback ticker list")
         return TICKERS
-        
-        
-        
-        
-        
 
 def get_market_context():
     """Calculate the S&P500 market regime and 63-session return."""
