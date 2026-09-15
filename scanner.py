@@ -10,25 +10,34 @@ from email.mime.text import MIMEText
 
 import pandas as pd
 
-from download import (
+from scanner.download import (
     TICKERS,
     USE_SP500,
     get_market_context,
     get_sp500_tickers,
-    safe_download
+    safe_download,
 )
-from filter import evaluate_filters, run_filters
-from indicator import calculate_indicators
-from risk import calculate_risk
-from score import calculate_score
+from scanner.filter import (
+    evaluate_filters,
+    run_filters,
+)
+from scanner.indicator import (
+    calculate_indicators,
+)
+from scanner.risk import (
+    calculate_risk,
+)
+from scanner.score import (
+    calculate_score,
+)
 
-VERSION = "v2.4.1"
+VERSION = "v2.5.3"
 
 # =====================================
 # 掃描模式
 # =====================================
 
-def analyse_stock(ticker, market_bull, spy_return):   
+def analyse_stock(ticker, market_bull, spy_returns):   
     """Return a structured scan outcome for candidates and diagnostics."""
     try:
         df = safe_download(ticker)
@@ -42,7 +51,7 @@ def analyse_stock(ticker, market_bull, spy_return):
                 "Result": None,
             }
                 
-        metrics = calculate_indicators(ticker, df, spy_return)
+        metrics = calculate_indicators(ticker, df, spy_returns)
         if metrics is None:
             return {
                 "Ticker": ticker,
@@ -92,6 +101,11 @@ def analyse_stock(ticker, market_bull, spy_return):
             "RelativeVolumePrevious": metrics["RelativeVolumePrevious"],
             "RSI": round(metrics["RSI"], 2),
             "RelativeStrength": round(metrics["RelativeStrength"], 2),
+            "RS21": round(metrics["RS21"], 2),
+            "RS63": round(metrics["RS63"], 2),
+            "RS126": round(metrics["RS126"], 2),
+            "RS252": round(metrics["RS252"], 2),
+            "RSComposite": round(metrics["RSComposite"], 2),
             "ADX": round(metrics["ADX"], 2),
             "MA20": round(metrics["MA20"], 2),
             "MA50": round(metrics["MA50"], 2),
@@ -145,8 +159,11 @@ def update_breadth_stats(breadth, metrics):
         breadth["VolumeRatio at least 1.0"] += 1
     if metrics["RelativeStrength"] >= 0:
         breadth["Non-negative relative strength"] += 1
+    if metrics["RSComposite"] >= 0:
+        breadth["Non-negative RSComposite"] += 1
         
 def rank_results(results):
+    """Preserve the v2.4.1 production ranking order."""
     if not results:
         return pd.DataFrame()
         
@@ -203,18 +220,37 @@ def build_report_frames(
         columns=["All Failed Conditions", "Count"],
     )
     
-    indicator_ready = breadth_counts.get("Indicator-ready stocks", 0)
+    indicator_ready = breadth_counts.get(
+        "Indicator-ready stocks",
+        0,
+    )
     breadth_rows = []
+    
     for metric, count in breadth_counts.items():
-        percentage = count / indicator_ready if indicator_ready else 0
-        breadth_rows.append((metric, count, round(percentage, 4)))
+        percentage = (
+            count / indicator_ready
+            if indicator_ready
+            else 0
+        )
+        breadth_rows.append(
+            (
+                metric,
+                count,
+                round(percentage, 4),
+            )
+        )
+        
     breadth_df = pd.DataFrame(
         breadth_rows,
-        columns=["Breadth Metric", "Count", "Percent of Indicator-ready"],
+        columns=[
+            "Breadth Metric",
+            "Count",
+            "Percent of Indicator-ready",
+        ],
     )
     
     if top20.empty:
-        top = pd.DataFrame(
+        top20 = pd.DataFrame(
             columns=[
                 "Rank",
                 "Ticker",
@@ -222,10 +258,21 @@ def build_report_frames(
                 "Signal",
                 "Score",
                 "RiskReward",
+                "RS21",
+                "RS63",
+                "RS126",
+                "RS252",
+                "RSComposite",
             ]
         )
-    
-    return top20, summary_df, rejection_df, all_failures_df, breadth_df
+
+    return (
+        top20,
+        summary_df,
+        rejection_df,
+        all_failures_df,
+        breadth_df,
+    )
 
 # =====================================
 # Excel
@@ -245,10 +292,14 @@ def export_excel(
         top20.to_excel(writer, sheet_name="Top20", index=False)
         summary_df.to_excel(writer, sheet_name="Scan Summary", index=False)
         rejection_df.to_excel(writer, sheet_name="First Rejections", index=False)
-        all_failures_df.to_excel(writer, sheet_name="All Failed Conditions", index=False)
+        all_failures_df.to_excel(
+            writer,
+            sheet_name="All Failed Conditions",
+            index=False,
+        )
         breadth_df.to_excel(writer, sheet_name="Market Breadth", index=False)
         
-        for sheet_name, worksheet in writer.sheets.items():
+        for worksheet in writer.sheets.values():
             worksheet.freeze_panes = "A2"
             worksheet.auto_filter.ref = worksheet.dimensions
             for column_cells in worksheet.columns:
@@ -315,10 +366,15 @@ MARKET BREADTH
 - RSI above 50: {breadth_counts.get('RSI above 50', 0)}
 - VolumeRatio at least 0.8: {breadth_counts.get('VolumeRatio at least 0.8', 0)}
 - VolumeRatio at least 1.0: {breadth_counts.get('VolumeRatio at least 1.0', 0)}
+- Non-negative RS63: {breadth_counts.get('Non-negative relative strength', 0)}
+- Non-negative RSComposite: {breadth_counts.get('Non-negative RSComposite', 0)}
 """
 
     if top20. empty:
-        body += "\nNo stocks passed the technical filters. See the attached diagnostics report. \n"
+        body += (
+            "\nNo stocks passed the technical filters. "
+            "See the attached diagnostics report. \n"
+        )
     else:
         body += "\nTOP CANDIDATES\n"
         for _, row in top20.iterrows():
@@ -329,6 +385,11 @@ Trade Plan: {row['TradePlan']}
 Signal: {row['Signal']}
 Score: {row['Score']}
 Price: {row['Price']}
+RS21: {row['RS21']}
+RS63: {row['RS63']}
+RS126: {row['RS126']}
+RS252: {row['RS252']}
+RSComposite: {row['RSComposite']}
 Stop Loss: {row['StopLoss']}
 Take Profit 1: {row['TakeProfit1']}
 Take Profit 2: {row['TakeProfit1']}
@@ -362,7 +423,10 @@ def send_email(subject, body, attachment=None):
             part = MIMEBase("application", "octet-stream")
             part.set_payload(file.read())
         encoders.encode_base64(part)
-        part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(attachment)}",)
+        part.add_header(
+            "Content-Disposition",
+            f"attachment; filename={os.path.basename(attachment)}",
+        )
         message.attach(part)
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
@@ -402,7 +466,7 @@ def main():
         market = get_market_context()
         spy_price = market["spy_price"]
         spy_ma200 = market["spy_ma200"]
-        spy_return = market["spy_return"]
+        spy_returns = market["spy_returns"]
         market_bull = market["market_bull"]
         print(f"Market Bull: {market_bull}")
     else:
@@ -410,7 +474,7 @@ def main():
         tickers = TICKERS
         spy_price = 0.0
         spy_ma200 = 0.0
-        spy_return = 0.0
+        spy_returns = {21: 0.0, 63: 0.0, 126: 0.0, 252: 0.0,}
         market_bull = True
 
     # ==========================
@@ -434,7 +498,7 @@ def main():
 
     for ticker in tickers:
         print(f"Processing {ticker}")
-        outcome = analyse_stock(ticker, market_bull, spy_return)
+        outcome = analyse_stock(ticker, market_bull, spy_returns)
         status_counts[outcome["Status"]] += 1
         
         metrics = outcome["Metrics"]
@@ -494,13 +558,18 @@ def main():
                     "Signal",
                     "Score",
                     "RiskReward",
+                    "RS21",
+                    "RS63",
+                    "RS126",
+                    "RS252",
+                    "RSComposite",
                     "VolumeSource",
                     "VolumeRatio", 
                 ]
             ]
         )
     else:
-        print(f"\nNo stocks passed the technical filters.")
+        print("\nNo stocks passed the technical filters.")
 
     # ==========================
     # EXPORT
@@ -524,7 +593,11 @@ def main():
         spy_ma200,
     )
     subject_prefix = "📈" if not top20.empty else "📊"
-    send_email(f"{subject_prefix} US Scanner {VERSION} Daily Diagnostic Report", email_body, excel_file)
+    send_email(
+        f"{subject_prefix} US Scanner {VERSION} Daily Diagnostic Report",
+        email_body,
+        excel_file,
+    )
 
 if __name__ == "__main__":
     main()
