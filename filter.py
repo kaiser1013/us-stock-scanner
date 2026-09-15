@@ -40,6 +40,8 @@ def momentum_filter(metrics):
 # ==========================
 
 def relative_strength_filter(metrics):
+    # v2.5 preserves the v2.4.1 production rule. RelativeStrength remains
+    # the 63-session stock return minus the 63-session benchmark return.
     if metrics["RelativeStrength"] < -5:
         return False, "Weak Relative Strength"
     return True, "OK"
@@ -71,4 +73,5 @@ def run_filters(ticker, metrics):
         if not evaluation["Passed"]:
             reason = evaluation["Reason"]
             print(f"{ticker}: {reason}")
+            return False, reason
     return True, "PASS"
