@@ -1,104 +1,241 @@
-# US Stock Scanner v2.4.1
+## US Stock Scanner v2.5.3
 
-## Overview
+### Continuous Integration
 
-v2.4.1 is the diagnostics and reporting update built on v2.4 Final. It keeps the same modular scanner, completed-session Volume Engine and ATR Risk Engine, while making each run auditable even when zero stocks pass the technical filters.
+Every push and pull request automatically executes:
 
-## File Structure
+- Ruff lint validation
+- MyPy type checking
+- Pytest unit tests
+- Scanner-package coverage validation
+
+Quality gates:
+
+- Lint must pass.
+- Type checking must pass.
+- All tests must pass.
+- Total scanner-package coverage must remain at least 80%.
+
+The unit tests use mocks for Yahoo Finance downloads, SMTP email delivery and scanner dependencies. CI therefore does not require live market data or email credentials.
+
+### Engineering Metrics
+
+Current quality metrics:
+
+- Ruff: Passing
+- MyPy: Passing
+- Unit Tests: 134
+- Coverage: 83%+
+
+Coverage by module:
+
+- download.py: 100%
+- filter.py: 100%
+- indicator.py: 94%
+- risk.py: 84%
+- score.py: 80%
+- scanner.py: 69%
+
+### Overview
+
+v2.5.3 is a test-coverage and regression-protection release built on the v2.5.0 multi-timeframe Relative Strength upgrade and the v2.5.1 CI baseline.
+
+This maintenance release adds automated validation for:
+
+- Market-data downloads and validation.
+- S&P 500 universe loading and fallback behaviour.
+- Multi-horizon benchmark returns.
+- Structured scanner outcomes.
+- Candidate ranking.
+- Market-breadth statistics.
+- Diagnostic report generation.
+- Five-sheet Excel export.
+- Diagnostic email generation.
+- SMTP attachment handling.
+- Bear-market email alerts.
+
+v2.5.2 does not change production filter, score, ranking, volume, risk or Relative Strength logic.
+
+The release preserves:
+
+- The modular scanner structure.
+- The completed-session Volume Engine.
+- The v2.4.1 production filters.
+- The v2.4.1 Score Engine and score thresholds.
+- ATR stops, targets and position sizing.
+- Multi-timeframe Relative Strength fields.
+- Structured scan outcomes and rejection diagnostics.
+- Five-sheet Excel reporting.
+- Diagnostic email reporting.
+- Bear-market early-exit behaviour.
+
+### File Structure
+
+scanner/scanner.py
+: Scan flow, diagnostics, reporting, ranking and email.
+
+scanner/download.py
+: yfinance download, S&P 500 universe and market context.
+
+scanner/indicator.py
+: Technical indicators, completed-session Volume Engine and multi-timeframe Relative Strength.
+
+scanner/filter.py
+: Existing v2.4.1 production filter rules.
+
+scanner/score.py
+: Existing v2.4.1 scoring formula.
+
+scanner/risk.py
+: ATR stops, targets and position sizing.
+
+tests/test_download.py
+: Download validation, retry outcomes, universe loading and market-context tests.
+
+tests/test_scanner.py
+: Scanner outcomes, ranking, reporting, Excel and email tests.
+
+tests/
+: Existing filter, score, risk, volume, Relative Strength and market-context tests.
+
+.github/workflows/ci.yml
+: Ruff, MyPy, pytest and coverage validation.
+
+.github/workflows/stock_scan.yml
+: Production stock-scan workflow.
+
+pyproject.toml
+: Ruff and MyPy configuration.
+
+requirements.txt
+: Runtime and test dependencies.
+
+CHANGELOG.md
+: Full project history through v2.5.2.
+
+UPGRADE_PLAN_V3.md
+: Incremental roadmap from v2.5 to v3.0.
+
+## v2.5 Relative Strength Expansion
+
+v2.4.1 calculated one 63-session Relative Strength value:
 
 ```text
-scanner.py      Scan flow, diagnostics, reporting, ranking and email
-download.py     yfinance download, S&P500 universe and market regime
-indicator.py    Technical indicators and automatic Volume Engine
-filter.py       Filter rules and full filter evaluation
-score.py        Score Engine and signal classification
-risk.py         ATR stops, targets and position sizing
+RelativeStrength = Stock 63-session return - benchmark 63-session return
 ```
 
-## v2.4.1 Diagnostic Flow
+v2.5.0 retains that field unchanged and adds:
 
 ```text
-Download stock
-↓
-Calculate indicators
-↓
-Record market-breadth conditions
-↓
-Evaluate every filter condition
-↓
-Record first rejection reason and all failed conditions
-↓
-Score and calculate risk for passed stocks
-↓
-Create Excel and email report even when Passed = 0
+RS21  = Stock 21-session return  - benchmark 21-session return
+RS63  = Stock 63-session return  - benchmark 63-session return
+RS126 = Stock 126-session return - benchmark 126-session return
+RS252 = Stock 252-session return - benchmark 252-session return
 ```
 
-## Excel Workbook
+`RelativeStrength` remains an alias of `RS63`, so the existing filter and score behaviour remain compatible.
 
-Every run creates an Excel workbook with five sheets:
+## RSComposite
 
-1. `Top20`
-   - Ranked candidates and full technical/risk fields.
-   - When no stock passes, the sheet is still created with column headers.
+The release adds an informational composite:
 
-2. `Scan Summary`
-   - Version and generation time.
-   - Market status, SPY and SPY MA200.
-   - Stocks scanned, passed and filtered.
-   - Data failures, indicator failures and processing errors.
-   - Pass rate.
+```text
+RSComposite = 0.15 * RS21
+            + 0.50 * RS63
+            + 0.25 * RS126
+            + 0.10 * RS252
+```
 
-3. `First Rejections`
-   - Counts the first production filter that excluded each stock.
-   - Useful for understanding the actual scanner funnel.
+The composite is included in console, Excel, email and market-breadth diagnostics. It does not change production score, filter or ranking logic in v2.5.0. This separation allows the new Alpha factor to be observed before it is promoted into ranking logic.
 
-4. `All Failed Conditions`
-   - Evaluates every applicable filter for each indicator-ready stock.
-   - Useful for diagnosing filters that may be too restrictive.
+## Data History Change
 
-5. `Market Breadth`
-   - Price above MA20, MA50 and MA200.
-   - MA20 above MA50.
-   - RSI above 50.
-   - VolumeRatio at least 0.8 and 1.0.
-   - Non-negative relative strength.
+The default yfinance history increases from one year to two years. At least 253 observations are required to calculate a complete 252-session return.
 
-Sheets include frozen headers, filters and practical column widths.
+Stocks without enough history continue to use the existing `Indicator Failure` structured outcome with reason:
 
-## Email Report
-
-The email always includes:
-
-- Market status and SPY context.
-- Stocks scanned and indicator-ready.
-- Passed, filtered and error counts.
-- Top first-fail reasons.
-- Market breadth counts.
-- Top candidates when available.
-- The diagnostics Excel workbook as an attachment.
-
-A zero-candidate run is therefore a valid result rather than an empty report.
-
-## Automatic Volume Engine
-
-The existing v2.4 Volume Engine remains unchanged:
-
-- Before 16:15 New York time, today's daily bar is treated as incomplete and the previous completed session is used.
-- After 16:15 New York time, or when the latest bar belongs to an earlier date, the latest completed session is used.
-- Average volume uses the 20 sessions before the selected session.
+```text
+Indicators unavailable or insufficient history
+```
 
 ## Production Filters
 
-- Price at least $20.
-- Average volume at least 1,000,000 shares.
-- Price above MA20.
-- MA20 above MA50.
-- RSI between 40 and 80.
-- Completed-session VolumeRatio at least 0.8.
-- MACD not materially below signal.
-- RelativeStrength at least -5.
+The v2.4.1 rules are unchanged:
 
-## Risk Environment Variables
+- Price at least $20
+- Average volume at least 1,000,000 shares
+- Price above MA20
+- MA20 above MA50
+- RSI between 40 and 80
+- Completed-session VolumeRatio at least 0.8
+- MACD not materially below signal
+- 63-session RelativeStrength at least -5
+
+## Score Engine
+
+The v2.4.1 categories and thresholds are unchanged:
+
+- TrendScore
+- MomentumScore
+- StrengthScore based on 63-session RelativeStrength
+- VolumeScore
+- MarketScore
+- ADXScore
+- RiskPenalty
+
+Multi-timeframe RS does not alter Score in v2.5.0.
+
+## Candidate Ranking
+
+The v2.4.1 order remains unchanged:
+
+1. TradePlan
+2. Score
+3. RiskReward
+
+RSComposite is output for observation but is not yet a ranking tie-breaker.
+
+## Completed-Session Volume Engine
+
+The v2.4.1 logic remains unchanged:
+
+- Before 16:15 New York time, today's daily bar is treated as incomplete and the preceding completed session is used.
+- After 16:15 New York time, or when the latest bar is from an earlier date, the latest bar is used.
+- Average volume uses the 20 sessions before the selected session.
+
+## Diagnostics
+
+Structured outcomes remain:
+
+- Passed
+- Filtered
+- Data Failure
+- Indicator Failure
+- Processing Error
+
+The filter engine still records:
+
+- First rejection reason
+- Every failed condition
+- Market breadth
+
+v2.5 adds `Non-negative RSComposite` to market breadth while keeping every existing breadth measure.
+
+## Excel Workbook
+
+Every successful bull-market scan creates the same five worksheets:
+
+1. `Top20`
+2. `Scan Summary`
+3. `First Rejections`
+4. `All Failed Conditions`
+5. `Market Breadth`
+
+The `Top20` sheet now includes `RS21`, `RS63`, `RS126`, `RS252` and `RSComposite`.
+
+## Environment Variables
+
+### Risk
 
 ```text
 ACCOUNT_SIZE=10000
@@ -108,7 +245,7 @@ TP1_R_MULTIPLE=1.5
 TP2_R_MULTIPLE=2.0
 ```
 
-## Required Email Environment Variables
+### Email
 
 ```text
 EMAIL_USER
@@ -116,26 +253,60 @@ EMAIL_PASSWORD
 EMAIL_TO
 ```
 
-## Validation Checklist
+## Installation
 
-A healthy run should show:
+```bash
+python -m pip install -r requirements.txt
+```
 
-- `Stocks Scanned` close to the loaded universe size.
-- A reasonable number of `Indicator-ready stocks`.
-- `Processing Errors` equal to zero or a clearly explainable small number.
-- Rejection counts that add context to the candidate count.
-- Market Breadth values that are not all zero.
-- An Excel attachment even when no candidates pass.
+## Run
 
-## v3 Development Direction
+```bash
+python scanner.py
+```
 
-v2.4.1 creates the diagnostic foundation for:
+## v2.5 Validation Checklist
 
-- Funnel and threshold analytics.
-- Historical pass-rate tracking.
-- Time-adjusted intraday relative volume.
-- Market regime and breadth scoring.
-- Sector rotation.
-- Breakout and pocket-pivot detection.
-- Trade-journal outcome tracking.
-- Backtesting and parameter validation.
+Before treating v2.5.0 as the new production baseline, compare it with a recent v2.4.1 run:
+
+- Stocks Scanned should remain close to the loaded universe size.
+- Data Failures should remain zero or explainably low.
+- Processing Errors should remain zero.
+- Indicator Failures may increase for stocks with fewer than 253 observations.
+- Passed/Filtered behaviour should match v2.4.1 for stocks with sufficient history.
+- Score and TradePlan should match v2.4.1 for the same market data.
+- Five Excel sheets must be generated.
+- Every Top20 row must contain all five RS fields.
+- `RelativeStrength` and `RS63` must be equal.
+- Email must include the multi-timeframe RS fields.
+
+### v2.5.2 CI Validation Checklist
+
+Before releasing v2.5.2:
+
+- Ruff must report `All checks passed`.
+- MyPy must complete without errors.
+- All existing and new unit tests must pass.
+- Total scanner-package coverage must remain at least 50%.
+- Download tests must not perform live network requests.
+- Scanner tests must not send real email.
+- Excel export tests must create all five expected worksheets.
+- Structured outcome tests must cover Passed, Filtered, Data Failure, Indicator Failure and Processing Error.
+- Candidate ranking must remain TradePlan, Score and RiskReward.
+- RelativeStrength must remain equal to RS63.
+- Production filter and Score Engine behaviour must remain unchanged.
+
+### Next Planned Release
+
+v2.6.0 is planned to add a three-state Market Regime Engine:
+
+- Bull
+- Neutral
+- Bear
+- RegimeScore
+
+The Market Regime Engine should initially remain additive and observable. Existing production filters, diagnostics, Relative Strength calculations, ranking logic, Volume Engine and Risk Engine should remain stable until the new regime outputs have been validated.
+
+## Disclaimer
+
+This project is research software and does not constitute financial advice. Market data may contain errors or revisions. Validate outputs independently before making any investment decision.
