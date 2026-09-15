@@ -1,0 +1,19 @@
+[tool.ruff]
+
+line-length = 120
+
+[tool.ruff.lint]
+
+select = [
+    "E",
+    "F"
+]
+
+ignore = [
+    "BLE001"
+]
+
+[tool.mypy]
+
+python_version = "3.12"
+ignore_missing_imports = true
