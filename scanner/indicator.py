@@ -6,11 +6,18 @@ from ta.momentum import RSIIndicator
 from ta.trend import MACD, ADXIndicator
 from ta.volatility import BollingerBands
 
-from download import safe_last
+from scanner.download import safe_last
 
 MARKET_TIMEZONE = ZoneInfo("America/New_York")
 MARKET_DATA_READY_TIME = time(16, 15)
 VOLUME_LOOKBACK = 20
+RS_LOOKBACKS = (21, 63, 126, 252)
+RS_COMPOSITE_WEIGHTS = {
+    21: 0.15,
+    63: 0.50,
+    126: 0.25,
+    252: 0.10,
+}
 
 def _normalise_index_date(index_value):
     """Return a New York calendar date from a pandas index value."""
@@ -23,7 +30,7 @@ def select_completed_volume_index(df, now=None):
     """
     Select the latest completed daily volume bar automatically.
     
-    If today's daily bar exists before 16:15 New York time, it is'treated as
+    If today's daily bar exists before 16:15 New York time, it is treated as
     intraday and the previous session is used. Otherwise the latest bar is used.
     """
     
@@ -51,11 +58,11 @@ def select_completed_volume_index(df, now=None):
     return -1, "Latest completed session"
     
 def calculate_volume_metrics(df, now=None):
-    """Calculate v3-ready completed-session relative-volume metrics."""
+    """Calculate completed-session relative-volume metrics."""
     volume = df["Volume"].astype(float)
     selected_position, volume_source = select_completed_volume_index(df, now=now)
-    
     selected_absolute_position = len(volume) + selected_position
+    
     if selected_absolute_position < VOLUME_LOOKBACK:
         raise ValueError("Insufficient history for 20-session average volume")
     
@@ -83,23 +90,53 @@ def calculate_volume_metrics(df, now=None):
         "RelativeVolumePrevious": round(relative_volume_previous, 2),
     }
 
-def calculate_indicators(ticker, df, spy_return):
-    """Calculate the technical and volume metrics used by the scanner."""
+def calculate_period_return(close, sessions):
+    """Calculate percentage return over a lookback without using future data."""
+    if len(close) < sessions + 1:
+        raise ValueError(f"Insufficient history for {sessions}-session return")
+    return float((close.iloc[-1] / close.iloc[-(sessions + 1)] - 1) * 100)
+    
+def calculate_relative_strength_metrics(close, spy_returns):
+    """Calculate v2.5 multi-horizon relative strength versus the benchmark."""
+    missing = [lookback for lookback in RS_LOOKBACKS if lookback not in spy_returns]
+    if missing:
+        raise ValueError(f"Missing benchmark returns for lookbacks: {missing}")
+        
+    relative_strength = {}
+    for lookback in RS_LOOKBACKS:
+        stock_return = calculate_period_return(close, lookback)
+        relative_strength[lookback] = stock_return - float(spy_returns[lookback])
+    
+    composite = sum(
+        relative_strength[lookback] * RS_COMPOSITE_WEIGHTS[lookback]
+        for lookback in RS_LOOKBACKS
+    )
+    
+    return {
+        "RS21": float(relative_strength[21]),
+        "RS63": float(relative_strength[63]),
+        "RS126": float(relative_strength[126]),
+        "RS252": float(relative_strength[252]),
+        "RSComposite": float(composite),
+    }
+
+def calculate_indicators(ticker, df, spy_returns):
+    """Calculate the technical, volume and v2.5 relative-strength metrics."""
     if df is None or df.empty:
         print(f"{ticker}: No data")
         return None
     if "Close" not in df.columns or df["Close"].isna().all():
         print(f"{ticker}: Close all NaN")
         return None
-    if len(df) < 210:
+    if len(df) < 253:
         print(f"{ticker}: insufficient data {len(df)}")
         return None
 
     close = df["Close"].astype(float)
     high = df["High"].astype(float)
     low = df["Low"].astype(float)
-    
     current_price = float(close.iloc[-1])
+    
     ma20 = safe_last(close.rolling(20).mean())
     ma50 = safe_last(close.rolling(50).mean())
     ma200 = safe_last(close.rolling(200).mean())
@@ -110,6 +147,10 @@ def calculate_indicators(ticker, df, spy_return):
 
     try:
         volume_metrics = calculate_volume_metrics(df)
+        relative_strength_metrics = calculate_relative_strength_metrics(
+            close,
+            spy_returns,
+        )
     except ValueError as error:
         print(f"{ticker}: {error}")
         return None
@@ -154,13 +195,6 @@ def calculate_indicators(ticker, df, spy_return):
         return None
 
     # ==========================
-    # RELATIVE STRENGTH
-    # ==========================
-    
-    stock_return = (close.iloc[-1] / close.iloc[-63] - 1) * 100
-    relative_strength = stock_return - spy_return
-
-    # ==========================
     # ADX
     # ==========================
     
@@ -175,8 +209,11 @@ def calculate_indicators(ticker, df, spy_return):
 
     print(
         f"{ticker} | Price={current_price:.2f} | MA20={ma20:.2f} | "
-        f"AvgVol={volume_metrics['AvgVolume']:,.0f} | "
-        f"VolRatio={volume_metrics['VolumeRatio']:.2f}"
+        f"RS21={relative_strength_metrics['RS21']:.2f} | "
+        f"RS63={relative_strength_metrics['RS63']:.2f} | "
+        f"RS126={relative_strength_metrics['RS126']:.2f} | "
+        f"RS252={relative_strength_metrics['RS252']:.2f} | " 
+        f"RSComposite={relative_strength_metrics['RSComposite']:.2f}"
     )
         
     return {
@@ -196,7 +233,12 @@ def calculate_indicators(ticker, df, spy_return):
         "SignalLine": float(signal_line),
         "MiddleBB": float(middle_band),
         "UpperBB": float(upper_band),
-        "RelativeStrength": float(relative_strength),
+        "RelativeStrength": relative_strength_metrics["RS63"],
+        "RS21": relative_strength_metrics["RS21"],
+        "RS63": relative_strength_metrics["RS63"],
+        "RS126": relative_strength_metrics["RS126"],
+        "RS252": relative_strength_metrics["RS252"],
+        "RSComposite": relative_strength_metrics["RSComposite"],
         "ADX": adx,
         "PlusDI": plus_di,
         "MinusDI": minus_di
