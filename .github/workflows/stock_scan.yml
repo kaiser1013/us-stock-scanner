@@ -29,7 +29,7 @@ jobs:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: |
-          python scanner.py
+          python -m scanner.scanner
 
       - name: Upload Report
         uses: actions/upload-artifact@v4
