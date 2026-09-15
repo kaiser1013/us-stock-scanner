@@ -10,7 +10,13 @@ def classify_signal(score):
     return "❌ NO TRADE"
 
 def calculate_score(metrics, market_bull):
-    """Score Engine v2.4. Final score is capped between 0 and 100."""
+    """Score Engine v2.5.
+    
+    The proven v2.4.1 scoring formula is intentionally unchanged. New v2.5
+    multi-horizon relative-strength fields are diagnostic/ranking research
+    outputs only and do not alter production scores in this release.
+    """
+    
     score = 0
     
     trend_score = 0
