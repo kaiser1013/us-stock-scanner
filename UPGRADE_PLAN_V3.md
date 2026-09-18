@@ -23,10 +23,30 @@ Status: implemented in this package.
 
 ## Phase 2: v2.6.0 Market Regime Engine
 
+Status: implemented in this package.
+
+Completed:
 - Expand Bull/Bear into Bull/Neutral/Bear.
-- Add explicit, auditable regime conditions.
-- Add RegimeScore without deleting existing score components.
-- Keep production filters unchanged during initial observation.
+- Add explicit and auditable regime conditions.
+- Add RegimeScore.
+- Preserved production filters.
+- Preserved ranking logic.
+- Preserved Relative Strength logic.
+
+## phase 2.1: v2.6.1 Market Regime Test Expansion
+
+Status: completed
+
+Objective:
+- Add dedicated Bull, Neutral and Bear regime tests.
+- Validate RegimeScore Behaviour.
+- Validate scanner outputs containing MarketRegime.
+- Validate Excel and email regime reporting.
+- Increase scanner.py coverage to 80%+.
+- Increase total package coverage to 85%+.
+
+No trading logic changes.
+Engineering-quality release only.
 
 ## Phase 3: v2.7.0 Breakout Engine
 
