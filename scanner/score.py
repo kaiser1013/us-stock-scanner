@@ -9,12 +9,11 @@ def classify_signal(score):
         return "⚪️ MONITOR"
     return "❌ NO TRADE"
 
-def calculate_score(metrics, market_bull):
-    """Score Engine v2.5.
+def calculate_score(metrics, market_bull, market_regime=None):
+    """Score Engine v2.6 with a three-state market RegimeScore.
     
-    The proven v2.4.1 scoring formula is intentionally unchanged. New v2.5
-    multi-horizon relative-strength fields are diagnostic/ranking research
-    outputs only and do not alter production scores in this release.
+    MarketScore is retained as an alias of RegimeScore for compatibility.
+    Calls that only supply market_bull continue to behave like v2.5.x.
     """
     
     score = 0
@@ -66,9 +65,22 @@ def calculate_score(metrics, market_bull):
     elif volume_ratio > 1.0:
         volume_score = 5
     score += volume_score
+
+    if market_regime is None:
+        market_regime = "BULL" if market_bull else "BEAR"
     
-    market_score = 15 if market_bull else 0
-    score += market_score
+    regime_scores = {
+        "BULL": 15,
+        "NEUTRAL": 7,
+        "BEAR": 0,
+    }
+    normalised_regime = str(market_regime).upper()
+    if normalised_regime not in regime_scores:
+        raise ValueError(f"Unsupported market regime: {market_regime}")
+
+    regime_score = regime_scores[normalised_regime]
+    market_score = regime_score
+    score += regime_score
     
     risk_penalty = 0
     if metrics["RSI"] > 75:
@@ -93,6 +105,8 @@ def calculate_score(metrics, market_bull):
         "MomentumScore": momentum_score,
         "StrengthScore": strength_score,
         "VolumeScore": volume_score,
+        "MarketRegime": normalised_regime,
+        "RegimeScore": regime_score,
         "MarketScore": market_score,
         "ADXScore": adx_score,
         "RiskPenalty": risk_penalty,
