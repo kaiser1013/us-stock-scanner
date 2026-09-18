@@ -1,4 +1,23 @@
-## US Stock Scanner v2.5.3
+## US Stock Scanner v2.6.1
+
+v2.6.1 is an engineering-quality release focused on expanding
+automated validation for the v2.6.0 Market Regime Engine.
+
+The release adds:
+
+- Dedicated Bull regime tests.
+- Dedicated Neutral regime tests.
+- Dedicated Bear regime tests.
+- RegimeScore validation tests.
+- MarketRegime reporting validation.
+- Email reporting validation.
+- Summary-report validation.
+
+No trading logic has changed.
+
+Coverage Goals:
+- scanner.py > 80%
+- project coverage > 85%
 
 ### Continuous Integration
 
@@ -24,37 +43,30 @@ Current quality metrics:
 
 - Ruff: Passing
 - MyPy: Passing
-- Unit Tests: 134
-- Coverage: 83%+
+- Unit Tests: 157
+- Coverage: 94.61%
 
 Coverage by module:
-
 - download.py: 100%
 - filter.py: 100%
 - indicator.py: 94%
 - risk.py: 84%
-- score.py: 80%
-- scanner.py: 69%
+- score.py: 81%
+- scanner.py: 99%
 
 ### Overview
 
-v2.5.3 is a test-coverage and regression-protection release built on the v2.5.0 multi-timeframe Relative Strength upgrade and the v2.5.1 CI baseline.
+v2.6.0 adds a three-state Market Regime Engine to the tested v2.5.3 engineering baseline.
 
-This maintenance release adds automated validation for:
+The v2.6.0 release adds:
 
-- Market-data downloads and validation.
-- S&P 500 universe loading and fallback behaviour.
-- Multi-horizon benchmark returns.
-- Structured scanner outcomes.
-- Candidate ranking.
-- Market-breadth statistics.
-- Diagnostic report generation.
-- Five-sheet Excel export.
-- Diagnostic email generation.
-- SMTP attachment handling.
-- Bear-market email alerts.
+- BULL, NEUTRAL and BEAR market regimes.
+- A 3% neutral band around the S&P 500 200-session moving average.
+- RegimeScore values of 15, 7 and 0 for BULL, NEUTRAL and BEAR.
+- Regime fields in scoring, candidate output, Excel summaries, console output and email.
+- Bear-market early exit only when the regime is BEAR.
 
-v2.5.2 does not change production filter, score, ranking, volume, risk or Relative Strength logic.
+v2.6.0 changes only the market component of scoring. Production filters, ranking, Volume Engine, Risk Engine and Relative Strength logic remain unchanged.
 
 The release preserves:
 
@@ -111,7 +123,7 @@ requirements.txt
 : Runtime and test dependencies.
 
 CHANGELOG.md
-: Full project history through v2.5.2.
+: Full project history through v2.6.0.
 
 UPGRADE_PLAN_V3.md
 : Incremental roadmap from v2.5 to v3.0.
@@ -173,13 +185,20 @@ The v2.4.1 rules are unchanged:
 
 ## Score Engine
 
+v2.6.0 replace the binary Bull/Bear market bonus with a three-state RegimeScore:
+
+- BULL = 15
+- NEUTRAL = 7
+- BEAR = 0
+
 The v2.4.1 categories and thresholds are unchanged:
 
 - TrendScore
 - MomentumScore
 - StrengthScore based on 63-session RelativeStrength
 - VolumeScore
-- MarketScore
+- RegimeScore
+- MarketScore (backwards-compatible alias)
 - ADXScore
 - RiskPenalty
 
@@ -296,16 +315,17 @@ Before releasing v2.5.2:
 - RelativeStrength must remain equal to RS63.
 - Production filter and Score Engine behaviour must remain unchanged.
 
-### Next Planned Release
+### Current Release
 
-v2.6.0 is planned to add a three-state Market Regime Engine:
+v2.6.1 Market Regime Test Expansion
 
-- Bull
-- Neutral
-- Bear
-- RegimeScore
-
-The Market Regime Engine should initially remain additive and observable. Existing production filters, diagnostics, Relative Strength calculations, ranking logic, Volume Engine and Risk Engine should remain stable until the new regime outputs have been validated.
+Completed:
+- Bull / Neutral / Bear regime tests
+- RegimeScore validation
+- Email reporting validation
+- Summary reporting validation
+- scanner.py coverage > 80%
+- total package coverage > 85%
 
 ## Disclaimer
 
