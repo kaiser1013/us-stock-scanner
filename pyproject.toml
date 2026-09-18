@@ -1,19 +1,31 @@
 [tool.ruff]
-
 line-length = 120
 
 [tool.ruff.lint]
-
 select = [
     "E",
-    "F"
+    "F",
 ]
 
 ignore = [
-    "BLE001"
+    "BLE001",
 ]
 
 [tool.mypy]
-
 python_version = "3.12"
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+
+[tool.coverage.run]
+source = [
+    "scanner",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 85
