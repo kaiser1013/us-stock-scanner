@@ -11,8 +11,10 @@ from email.mime.text import MIMEText
 import pandas as pd
 
 from scanner.download import (
+    REGIME_SCORES,
     TICKERS,
     USE_SP500,
+    classify_market_regime,
     get_market_context,
     get_sp500_tickers,
     safe_download,
@@ -31,13 +33,13 @@ from scanner.score import (
     calculate_score,
 )
 
-VERSION = "v2.5.3"
+VERSION = "v2.6.0"
 
 # =====================================
 # 掃描模式
 # =====================================
 
-def analyse_stock(ticker, market_bull, spy_returns):   
+def analyse_stock(ticker, market_bull, spy_returns, market_regime=None):   
     """Return a structured scan outcome for candidates and diagnostics."""
     try:
         df = safe_download(ticker)
@@ -74,7 +76,7 @@ def analyse_stock(ticker, market_bull, spy_returns):
                 "Result": None,
             }
 
-        score_result = calculate_score(metrics, market_bull)
+        score_result = calculate_score(metrics, market_bull, market_regime)
         risk_result = calculate_risk(df, metrics, score_result["Score"])
             
         result = {
@@ -116,6 +118,14 @@ def analyse_stock(ticker, market_bull, spy_returns):
             "MomentumScore": score_result["MomentumScore"],
             "StrengthScore": score_result["StrengthScore"],
             "VolumeScore": score_result["VolumeScore"],
+            "MarketRegime": score_result.get(
+                "MarketRegime",
+                market_regime or ("BULL" if market_bull else "BEAR"),
+            ),
+            "RegimeScore": score_result.get(
+                "RegimeScore",
+                score_result["MarketScore"],
+            ),
             "MarketScore": score_result["MarketScore"],
             "ADXScore": score_result["ADXScore"],
             "RiskPenalty": score_result["RiskPenalty"],
@@ -190,15 +200,17 @@ def build_report_frames(
     market_bull,
     spy_price,
     spy_ma200,
+    market_regime=None,
 ):
-    market_status = "BULL" if market_bull else "BEAR"
+    market_status = market_regime or ("BULL" if market_bull else "BEAR")
     passed_count = int(status_counts.get("Passed",0))
     pass_rate = passed_count / total_scanned if total_scanned else 0
 
     summary_rows = [
         ("Version", VERSION),
         ("Generated At", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-        ("Market Status", market_status),
+        ("Market Regime", market_status),
+        ("Regime Score", {"BULL": 15, "NEUTRAL": 7, "BEAR": 0}[market_status]),
         ("SPY", round(spy_price, 2)),
         ("SPY MA200", round(spy_ma200, 2)),
         ("Stocks Scanned", total_scanned),
@@ -257,6 +269,8 @@ def build_report_frames(
                 "TradePlan",
                 "Signal",
                 "Score",
+                "MarketRegime",
+                "RegimeScore",
                 "RiskReward",
                 "RS21",
                 "RS63",
@@ -332,8 +346,18 @@ def build_email_body(
     market_bull,
     spy_price,
     spy_ma200,
+    market_regime=None,
 ):
-    market_status = "🟢 BULL" if market_bull else "🔴 BEAR"
+    regime_score = {
+        "BULL": 15,
+        "NEUTRAL": 7,
+        "BEAR": 0,
+    }[market_regime or ("BULL" if market_bull else "BEAR")]
+    market_status = {
+        "BULL": "🟢 BULL",
+        "NEUTRAL": "🟡 NEUTRAL",
+        "BEAR": "🔴 BEAR",
+    }[market_regime or ("BULL" if market_bull else "BEAR")]
     passed_count = int(status_counts.get("Passed", 0))
     filtered_count = int(status_counts.get("Filtered", 0))
     indicator_ready = int(breadth_counts.get("Indicator-ready stocks", 0))
@@ -341,7 +365,8 @@ def build_email_body(
     body = f"""
 ================================
 US STOCK SCANNER {VERSION}
-Market: {market_status}
+Market Regime: {market_status}
+Regime Score: {regime_score}
 SPY: {spy_price:.2f}
 SPY MA200: {spy_ma200:.2f}
 ================================
@@ -384,6 +409,8 @@ Ticker: {row['Ticker']}
 Trade Plan: {row['TradePlan']}
 Signal: {row['Signal']}
 Score: {row['Score']}
+Market Regime: {row['MarketRegime']}
+Regime Score: {row['RegimeScore']}
 Price: {row['Price']}
 RS21: {row['RS21']}
 RS63: {row['RS63']}
@@ -439,10 +466,10 @@ def send_email(subject, body, attachment=None):
 # BEAR MARKET PROTECTION
 # ==========================
 
-def send_bear_market_email(spy_price, spy_ma200):
+def send_bear_market_email(spy_price, spy_ma200, market_regime="BEAR"):
     body = f"""
-MARKET STATUS
-🔴 BEAR
+MARKET REGIME
+🔴 {market_regime}
 SPY: {spy_price:.2f}
 SPY MA200: {spy_ma200:.2f}
 No swing trades today.
@@ -468,7 +495,9 @@ def main():
         spy_ma200 = market["spy_ma200"]
         spy_returns = market["spy_returns"]
         market_bull = market["market_bull"]
-        print(f"Market Bull: {market_bull}")
+        market_regime = classify_market_regime(spy_price, spy_ma200)
+        regime_score = REGIME_SCORES[market_regime]
+        print(f"Market Regime: {market_regime} | RegimeScore={regime_score}")
     else:
         print("TEST MODE ENABLED")
         tickers = TICKERS
@@ -476,14 +505,16 @@ def main():
         spy_ma200 = 0.0
         spy_returns = {21: 0.0, 63: 0.0, 126: 0.0, 252: 0.0,}
         market_bull = True
+        market_regime = "BULL"
+        regime_score = 15
 
     # ==========================
     # BEAR MARKET
     # ==========================
     
-    if spy_price < spy_ma200:
-        print("Bear market detected")
-        send_bear_market_email(spy_price, spy_ma200)
+    if market_regime == "BEAR":
+        print("Bear market regime detected")
+        send_bear_market_email(spy_price, spy_ma200, market_regime)
         return
         
     results = []
@@ -498,7 +529,7 @@ def main():
 
     for ticker in tickers:
         print(f"Processing {ticker}")
-        outcome = analyse_stock(ticker, market_bull, spy_returns)
+        outcome = analyse_stock(ticker, market_bull, spy_returns, market_regime)
         status_counts[outcome["Status"]] += 1
         
         metrics = outcome["Metrics"]
@@ -539,6 +570,7 @@ def main():
         market_bull,
         spy_price,
         spy_ma200,
+        market_regime,
     )
     top20, summary_df, rejection_df, all_failures_df, breadth_df = report_frames
 
@@ -557,6 +589,8 @@ def main():
                     "TradePlan",
                     "Signal",
                     "Score",
+                    "MarketRegime",
+                    "RegimeScore",
                     "RiskReward",
                     "RS21",
                     "RS63",
@@ -591,6 +625,7 @@ def main():
         market_bull,
         spy_price,
         spy_ma200,
+        market_regime,
     )
     subject_prefix = "📈" if not top20.empty else "📊"
     send_email(
