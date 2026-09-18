@@ -5,6 +5,29 @@ import yfinance as yf
 
 USE_SP500 = True
 
+
+REGIME_NEUTRAL_BAND = 0.03
+REGIME_SCORES = {
+    "BULL": 15,
+    "NEUTRAL": 7,
+    "BEAR": 0,
+}
+
+
+def classify_market_regime(spy_price, spy_ma200, neutral_band=REGIME_NEUTRAL_BAND):
+    """Classify the benchmark as BULL, NEUTRAL or BEAR around MA200."""
+    if spy_ma200 <= 0:
+        raise ValueError("SPY MA200 must be positive")
+
+    upper_threshold = spy_ma200 * (1 + neutral_band)
+    lower_threshold = spy_ma200 * (1 - neutral_band)
+
+    if spy_price > upper_threshold:
+        return "BULL"
+    if spy_price < lower_threshold:
+        return "BEAR"
+    return "NEUTRAL"
+
 # =====================================
 # 測試股票池
 # =====================================
@@ -49,7 +72,7 @@ def safe_download(
 ):
     """Download price data with retry and basic OHLCV validation.
     
-    v2.5 users two years by default so 252-session relative strength has
+    v2.6 users two years by default so 252-session relative strength has
     sufficient history while retaining the v2.4.1 validation behaviour.
     """
     required_columns = {"Close", "High", "Low", "Volume"}
@@ -112,10 +135,10 @@ def calculate_period_return(close, sessions):
     return float((close.iloc[-1] / close.iloc[-(sessions + 1)] - 1) * 100)
 
 def get_market_context():
-    """Calculate market regime and multi-horizon SPY returns.
+    """Calculate the v2.6 regime and multi-horizon SPY returns.
     
-    The v2.4.1 keys are preserved for backwards compatibility. New v2.5 keys
-    provide benchmark returns for 21, 63, 126 and 252 sessions.
+    Legacy keys remain available for backwards compatibility. The three-state
+    regime user a 3% neutral band around the 200-session moving average.
     """
     spy = safe_download("^GSPC", period="2y", interval="1d")
     if spy is None or spy.empty:
