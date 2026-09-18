@@ -83,18 +83,27 @@ def create_candidate(**overrides):
         "Ticker": "TEST",
         "TradePlan": "✅ ACTIONABLE",
         "Signal": "🟢 BUY",
+        
         "Score": 85.0,
+
+        "MarketRegime": "BULL",
+        "RegimeScore": 15,
+        
         "Price": 100.0,
         "RiskReward": 2.0,
+        
         "RS21": 5.0,
         "RS63": 10.0,
         "RS126": 8.0,
         "RS252": 6.0,
         "RSComposite": 8.45,
+        
         "StopLoss": 97.0,
         "TakeProfit1": 104.5,
         "TakeProfit2": 106.0,
+        
         "PositionShares": 33,
+        
         "VolumeSource": "Latest completed session",
         "VolumeRatio": 1.25,
     }
@@ -561,6 +570,8 @@ def test_build_email_body_includes_candidate_details():
 
     assert "TOP CANDIDATES" in body
     assert "Ticker: TEST" in body
+    assert "Market Regime: BULL" in body
+    assert "Regime Score: 15" in body
     assert "RSComposite: 8.45" in body
     assert "Trade Plan: ✅ ACTIONABLE" in body
 
