@@ -33,7 +33,7 @@ from scanner.score import (
     calculate_score,
 )
 
-VERSION = "v2.6.0"
+VERSION = "v2.7.0"
 
 # =====================================
 # 掃描模式
@@ -108,6 +108,8 @@ def analyse_stock(ticker, market_bull, spy_returns, market_regime=None):
             "RS126": round(metrics["RS126"], 2),
             "RS252": round(metrics["RS252"], 2),
             "RSComposite": round(metrics["RSComposite"], 2),
+            "Breakout55": bool(metrics.get("Breakout55", False)),
+            "DistanceToHigh55": round(float(metrics.get("DistanceToHigh55", 0.0)), 2),
             "ADX": round(metrics["ADX"], 2),
             "MA20": round(metrics["MA20"], 2),
             "MA50": round(metrics["MA50"], 2),
@@ -277,6 +279,8 @@ def build_report_frames(
                 "RS126",
                 "RS252",
                 "RSComposite",
+                "Breakout55",
+                "DistanceToHigh55",
             ]
         )
 
@@ -417,6 +421,8 @@ RS63: {row['RS63']}
 RS126: {row['RS126']}
 RS252: {row['RS252']}
 RSComposite: {row['RSComposite']}
+Breakout55: {bool(row.get("Breakout55", False))}
+DistanceToHigh55: {float(row.get("DistanceToHigh55", 0.0)):.2f}%
 Stop Loss: {row['StopLoss']}
 Take Profit 1: {row['TakeProfit1']}
 Take Profit 2: {row['TakeProfit1']}
@@ -557,6 +563,7 @@ def main():
     
     ranked = rank_results(results)
     top20 = ranked.head(20).copy() if not ranked.empty else pd.DataFrame()
+        
     if not top20.empty:
         top20.insert(0, "Rank", range(1, len(top20) + 1))
 
@@ -574,33 +581,48 @@ def main():
     )
     top20, summary_df, rejection_df, all_failures_df, breadth_df = report_frames
 
+    # Backwards compatibility for v2.6.1 fixtures and historical data.
+    # Production v2.7.0 results should already contain these fields.
+
+    if "Breakout55" not in top20.columns:
+        top20["Breakout55"] = False
+        
+    if "DistanceToHigh55" not in top20.columns:
+        top20["DistanceToHigh"] = 0.0
+        
     print("\nSCAN SUMMARY:")
     print(summary_df.to_string(index=False))
+    
     print("\nTOP FIRST-FAIL REASONS:")
     print(rejection_df.head(10).to_string(index=False))
 
     if not top20.empty:
         print("\nTOP 20 RESULTS:")
+        
+        display_columns = [
+            "Rank", 
+            "Ticker", 
+            "TradePlan",
+            "Signal",
+            "Score",
+            "MarketRegime",
+            "RegimeScore",
+            "RiskReward",
+            "RS21",
+            "RS63",
+            "RS126",
+            "RS252",
+            "RSComposite",
+            "Breakout55",
+            "DistanceToHigh55",
+            "VolumeSource",
+            "VolumeRatio", 
+        ]
+            
         print(
-            top20[
-                [
-                    "Rank", 
-                    "Ticker", 
-                    "TradePlan",
-                    "Signal",
-                    "Score",
-                    "MarketRegime",
-                    "RegimeScore",
-                    "RiskReward",
-                    "RS21",
-                    "RS63",
-                    "RS126",
-                    "RS252",
-                    "RSComposite",
-                    "VolumeSource",
-                    "VolumeRatio", 
-                ]
-            ]
+            top20[display_columns].to_string(
+                index=False
+            )
         )
     else:
         print("\nNo stocks passed the technical filters.")
