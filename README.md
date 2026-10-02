@@ -1,25 +1,26 @@
-## US Stock Scanner v2.6.1
+# US Stock Scanner v2.7.0
 
-v2.6.1 is an engineering-quality release focused on expanding
-automated validation for the v2.6.0 Market Regime Engine.
+v2.7.0 introduces the Breakout Engine.
 
 The release adds:
 
-- Dedicated Bull regime tests.
-- Dedicated Neutral regime tests.
-- Dedicated Bear regime tests.
-- RegimeScore validation tests.
-- MarketRegime reporting validation.
-- Email reporting validation.
-- Summary-report validation.
+- Breakout55
+- DistanceToHigh55
+- Breakout diagnostics in scanner output
+- Breakout diagnostics in Excel reporting
+- Breakout diagnostics in email reporting
+- Breakout diagnostics in Top20 reporting
 
-No trading logic has changed.
+Breakout diagnostics are observational only.
 
-Coverage Goals:
-- scanner.py > 80%
-- project coverage > 85%
+They do not affect:
 
-### Continuous Integration
+- Production filters
+- Score Engine
+- TradePlan logic
+- Candidate ranking
+
+## Continuous Integration
 
 Every push and pull request automatically executes:
 
@@ -30,23 +31,21 @@ Every push and pull request automatically executes:
 
 Quality gates:
 
-- Lint must pass.
-- Type checking must pass.
-- All tests must pass.
-- Total scanner-package coverage must remain at least 80%.
+- Lint must pass
+- Type checking must pass
+- All tests must pass
 
-The unit tests use mocks for Yahoo Finance downloads, SMTP email delivery and scanner dependencies. CI therefore does not require live market data or email credentials.
-
-### Engineering Metrics
+## Engineering Metrics
 
 Current quality metrics:
 
-- Ruff: Passing
-- MyPy: Passing
-- Unit Tests: 157
-- Coverage: 94.61%
+- Ruff: PASS
+- MyPy: PASS
+- Unit Tests: 179
+- Breakout Tests: 22
 
 Coverage by module:
+
 - download.py: 100%
 - filter.py: 100%
 - indicator.py: 94%
@@ -54,34 +53,40 @@ Coverage by module:
 - score.py: 81%
 - scanner.py: 99%
 
-### Overview
+## Breakout Diagnostics
 
-v2.6.0 adds a three-state Market Regime Engine to the tested v2.5.3 engineering baseline.
+v2.7.0 introduces:
 
-The v2.6.0 release adds:
+- Breakout55
+- DistanceToHigh55
 
-- BULL, NEUTRAL and BEAR market regimes.
-- A 3% neutral band around the S&P 500 200-session moving average.
-- RegimeScore values of 15, 7 and 0 for BULL, NEUTRAL and BEAR.
-- Regime fields in scoring, candidate output, Excel summaries, console output and email.
-- Bear-market early exit only when the regime is BEAR.
+Definition:
 
-v2.6.0 changes only the market component of scoring. Production filters, ranking, Volume Engine, Risk Engine and Relative Strength logic remain unchanged.
+Breakout55:
+Latest close >= Highest high of the prior completed 55 sessions.
 
-The release preserves:
+DistanceToHigh55:
+(Current Price / Prior 55-session High - 1) * 100
 
-- The modular scanner structure.
-- The completed-session Volume Engine.
-- The v2.4.1 production filters.
-- The v2.4.1 Score Engine and score thresholds.
-- ATR stops, targets and position sizing.
-- Multi-timeframe Relative Strength fields.
-- Structured scan outcomes and rejection diagnostics.
-- Five-sheet Excel reporting.
-- Diagnostic email reporting.
-- Bear-market early-exit behaviour.
+Latest-session highs are excluded from the reference window.
 
-### File Structure
+Breakout diagnostics are exported to:
+
+- Console output
+- Candidate results
+- Top20
+- Excel reporting
+- Diagnostic email reporting
+
+Breakout diagnostics do not participate in:
+
+- Filters
+- Score calculation
+- Ranking
+
+This preserves the existing production engine while allowing breakout behaviour to be observed before promotion into ranking logic.
+
+## File Structure
 
 scanner/scanner.py
 : Scan flow, diagnostics, reporting, ranking and email.
@@ -147,7 +152,7 @@ RS252 = Stock 252-session return - benchmark 252-session return
 
 `RelativeStrength` remains an alias of `RS63`, so the existing filter and score behaviour remain compatible.
 
-## RSComposite
+### RSComposite
 
 The release adds an informational composite:
 
@@ -160,7 +165,7 @@ RSComposite = 0.15 * RS21
 
 The composite is included in console, Excel, email and market-breadth diagnostics. It does not change production score, filter or ranking logic in v2.5.0. This separation allows the new Alpha factor to be observed before it is promoted into ranking logic.
 
-## Data History Change
+### Data History Change
 
 The default yfinance history increases from one year to two years. At least 253 observations are required to calculate a complete 252-session return.
 
@@ -170,7 +175,7 @@ Stocks without enough history continue to use the existing `Indicator Failure` s
 Indicators unavailable or insufficient history
 ```
 
-## Production Filters
+### Production Filters
 
 The v2.4.1 rules are unchanged:
 
@@ -278,13 +283,13 @@ EMAIL_TO
 python -m pip install -r requirements.txt
 ```
 
-## Run
+### Run
 
 ```bash
 python scanner.py
 ```
 
-## v2.5 Validation Checklist
+### v2.5 Validation Checklist
 
 Before treating v2.5.0 as the new production baseline, compare it with a recent v2.4.1 run:
 
@@ -315,17 +320,15 @@ Before releasing v2.5.2:
 - RelativeStrength must remain equal to RS63.
 - Production filter and Score Engine behaviour must remain unchanged.
 
-### Current Release
+## Current Release
 
-v2.6.1 Market Regime Test Expansion
+v2.7.0
+Production Ready
 
-Completed:
-- Bull / Neutral / Bear regime tests
-- RegimeScore validation
-- Email reporting validation
-- Summary reporting validation
-- scanner.py coverage > 80%
-- total package coverage > 85%
+Validation:
+- Ruff PASS
+- MyPy PASS
+- 179 Tests PASS
 
 ## Disclaimer
 
