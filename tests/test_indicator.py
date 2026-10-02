@@ -789,12 +789,16 @@ def test_calculate_indicators_returns_required_fields():
         "RS126",
         "RS252",
         "RSComposite",
+        "Breakout55",
+        "DistanceToHigh55",
         "ADX",
         "PlusDI",
         "MinusDI",
     }
 
     assert expected_fields == set(result)
+    assert isinstance(result["Breakout55"], bool)
+    assert isinstance(result["DistanceToHigh55"], float)
 
 
 def test_calculate_indicators_preserves_ticker():
