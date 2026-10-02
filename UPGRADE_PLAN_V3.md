@@ -50,18 +50,56 @@ Engineering-quality release only.
 
 ## Phase 3: v2.7.0 Breakout Engine
 
-- Add Breakout55.
-- Add DistanceToHigh55.
-- Output breakout diagnostics before promoting them into rankings.
-- Preserve all existing score fields and reports.
+Status: implemented in this package.
+
+Completed:
+
+- Added Breakout55.
+- Added DistanceToHigh55.
+- Added Breakout diagnostics to candidate output.
+- Added Breakout diagnostics to Top20 output.
+- Added Breakout diagnostics to email reporting.
+- Added Breakout diagnostics to Excel reporting.
+- Added dedicated Breakout Engine validation tests.
+
+Preserved:
+
+- Production filters
+- Score Engine
+- Regime Engine
+- TradePlan logic
+- Candidate ranking
+
+Breakout diagnostics remain observational and do not participate in ranking.
 
 ## Phase 4: v3.0.0 Walk-Forward Validation
 
-- Add an independent `backtest.py`.
-- Use point-in-time signal calculation without future data.
-- Compare Top N portfolios against SPY.
-- Export trade records, summary metrics, periodic returns and drawdown.
-- Keep daily production scanning independent from research execution.
+Status: next release
+
+Objectives:
+
+- Add backtest.py.
+- Point-in-time signal generation.
+- Historical signal validation.
+- Portfolio simulation.
+- SPY benchmark comparison.
+- Trade log export.
+- Performance analytics.
+
+## Phase 4.1 Factor Validation
+
+Objectives:
+
+- Validate RegimeScore performance.
+- Validate RSComposite performance.
+- Validate Breakout55 performance.
+- Validate DistanceToHigh55 performance.
+- Compare factor combinations.
+- Export factor-performance reports.
+
+Purpose:
+
+Keep diagnostics separate from production ranking until statistical validation is complete.
 
 ## Required Backtest Metrics
 
