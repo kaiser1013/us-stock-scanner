@@ -11,6 +11,7 @@ from scanner.download import safe_last
 MARKET_TIMEZONE = ZoneInfo("America/New_York")
 MARKET_DATA_READY_TIME = time(16, 15)
 VOLUME_LOOKBACK = 20
+BREAKOUT_LOOKBACK = 55
 RS_LOOKBACKS = (21, 63, 126, 252)
 RS_COMPOSITE_WEIGHTS = {
     21: 0.15,
@@ -120,6 +121,47 @@ def calculate_relative_strength_metrics(close, spy_returns):
         "RSComposite": float(composite),
     }
 
+def calculate_breakout_metrics(
+    close,
+    high,
+    lookback=BREAKOUT_LOOKBACK,
+):
+    """Calculate diagnostics against the prior completed session high.
+    
+    The latest bar is excluded from the reference window.
+    
+    A positive DistanceToHigh55 means the latest close is above
+    the prior 55-session high.
+    """
+    if lookback <= 0:
+        raise ValueError("Breakout lookback must be positive")
+        
+    if len(close) < lookback + 1 or len(high) < lookback + 1:
+        raise ValueError(
+            f"Insufficient history for {lookback}-session breakout"
+        )
+    
+    current_price = float(close.iloc[-1])
+    prior_high = float(
+        high.iloc[-(lookback + 1):-1].max()
+    )
+    
+    if (
+        pd.isna(current_price)
+        or pd.isna(prior_high)
+        or prior_high <= 0
+    ):
+        raise ValueError( "Breakout reference price is invalid")
+    
+    distance_to_high = (
+        current_price / prior_high - 1.0
+    ) * 100
+    
+    return {
+        "Breakout55": bool(current_price >= prior_high),
+        "DistanceToHigh55": float(distance_to_high),
+    }
+
 def calculate_indicators(ticker, df, spy_returns):
     """Calculate the technical, volume and v2.5 relative-strength metrics."""
     if df is None or df.empty:
@@ -151,6 +193,7 @@ def calculate_indicators(ticker, df, spy_returns):
             close,
             spy_returns,
         )
+        breakout_metrics = calculate_breakout_metrics(close, high)
     except ValueError as error:
         print(f"{ticker}: {error}")
         return None
@@ -239,6 +282,8 @@ def calculate_indicators(ticker, df, spy_returns):
         "RS126": relative_strength_metrics["RS126"],
         "RS252": relative_strength_metrics["RS252"],
         "RSComposite": relative_strength_metrics["RSComposite"],
+        "Breakout55": breakout_metrics["Breakout55"],
+        "DistanceToHigh55": breakout_metrics["DistanceToHigh55"],
         "ADX": adx,
         "PlusDI": plus_di,
         "MinusDI": minus_di
