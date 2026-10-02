@@ -44,6 +44,8 @@ def make_passed_outcome(
             "RS126": 6.0,
             "RS252": 8.0,
             "RSComposite": 4.0,
+            "Breakout55": False,
+            "DistanceToHigh55": -1.25,
             "VolumeSource": "Latest completed session",
             "VolumeRatio": 1.2,
         },
@@ -333,6 +335,9 @@ def test_main_runs_complete_bull_market_scan(monkeypatch):
         "Bull diagnostic report",
         "bull_report.xlsx",
     )
+    
+    assert bool(exported_top20.iloc[0]["Breakout55"]) is False
+    assert exported_top20.iloc[0]["DistanceToHigh55"] == -1.25
 
 
 def test_main_runs_neutral_market_with_empty_results(monkeypatch):
