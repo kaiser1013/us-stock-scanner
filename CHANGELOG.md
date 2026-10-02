@@ -1,5 +1,53 @@
 # CHANGELOG
 
+## v2.7.0 Breakout Engine
+
+### Added
+- Added Breakout55 diagnostics.
+- Added DistanceToHigh55 diagnostics.
+- Added Breakout55 to indicator output.
+- Added DistanceToHigh55 to indicator output.
+- Added Breakout diagnostics to scanner candidate output.
+- Added Breakout diagnostics to Excel Top20 reporting.
+- Added Breakout diagnostics to email reporting.
+- Added comprehensive breakout-engine validation tests.
+
+### Added Tests
+- Breakout55 above-prior-high validation.
+- Breakout55 below-prior-high validation.
+- Breakout55 equal-prior-high validation.
+- DistanceToHigh55 positive validation.
+- DistanceToHigh55 negative validation.
+- Percentage-formula validation.
+- Latest-bar exclusion validation.
+- Custom-lookback validation.
+- Invalid-input validation.
+- Ranking-preservation validation.
+- Output-column preservation validation.
+- Breakout-output column vallidation.
+- Ranking-column preservation validation.
+- Breakout diagnostic reporting validation.
+
+### Preserved
+- Preserved all v2.6.1 Market Regime logic.
+- Preserved all production filters.
+- Preserved Score Engine behaviour.
+- Preserved ranking order.
+- Preserved Volume Engine.
+- Preserved Relative Strength calculations.
+- Preserved ATR risk management.
+- Preserved Excel reporting.
+- Preserved email reporting.
+
+### Validation Results
+- Ruff: PASS
+- MyPy: PASS
+- Unit Tests: 179 PASS
+
+### Release Status
+Production Ready
+
+
 ## v2.6.1 Market Regime Test Expansion
 
 ### Added
