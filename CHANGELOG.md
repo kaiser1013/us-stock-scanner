@@ -1,5 +1,117 @@
 # CHANGELOG
 
+## v2.8.0 Backtest Metrics Foundation
+
+### Added
+
+- Added `scanner/backtest.py`.
+- Added `tests/test_backtest.py`.
+- Added the `Trade` data class for representing completed trades.
+- Added the `BacktestResult` data class for representing consolidated backtest results.
+- Added individual trade-return calculation.
+- Added maximum-drawdown calculation.
+- Added CAGR calculation.
+- Added annualised Sharpe ratio calculation.
+- Added annualised Sortino ratio calculation.
+- Added profit-factor calculation.
+- Added trade-expectancy calculation.
+- Added total-return calculation.
+- Added benchmark-return comparison.
+- Added Alpha calculation.
+- Added consolidated backtest metrics generation through `build_metrics`.
+
+### Performance Metrics
+
+The initial Backtest Metrics Foundation supports:
+
+- Win rate
+- Average gain
+- Average loss
+- Profit factor
+- Expectancy
+- Total return
+- CAGR
+- Sharpe ratio
+- Sortino ratio
+- Maximum drawdown
+- Benchmark return
+- Alpha
+
+### Added Tests
+
+- Added positive trade-return validation.
+- Added negative trade-return validation.
+- Added floating-point trade-return comparison using `pytest.approx`.
+- Added maximum-drawdown validation.
+- Added profit-factor validation.
+- Added expectancy validation.
+- Added required-metrics validation.
+- Added Alpha calculation validation.
+
+### Changed
+
+- Updated the unit-test baseline from 179 tests to 186 tests.
+- Added an isolated performance-analytics module without changing the existing stock-scanner execution flow.
+- Established v2.8.0 as the first incremental implementation step towards v3.0.0 Walk-Forward Validation.
+- Continued sequential numeric versioning without release-candidate suffixes.
+
+### Preserved
+
+- Preserved all v2.7.0 Breakout Engine behaviour.
+- Preserved all v2.6.x Market Regime Engine behaviour.
+- Preserved production filters and filter order.
+- Preserved Score Engine behaviour.
+- Preserved TradePlan logic.
+- Preserved candidate ranking by TradePlan, Score and RiskReward.
+- Preserved completed-session Volume Engine behaviour.
+- Preserved Relative Strength calculations.
+- Preserved RSComposite calculations.
+- Preserved MarketRegime and RegimeScore behaviour.
+- Preserved Breakout55 and DistanceToHigh55 diagnostics.
+- Preserved ATR risk management and position sizing.
+- Preserved Excel reporting.
+- Preserved email reporting.
+- Preserved the observational status of RSComposite, Breakout55 and DistanceToHigh55.
+
+### Current Scope
+
+v2.8.0 provides reusable performance calculations for trade returns and equity curves.
+
+It does not yet provide a complete portfolio backtesting or walk-forward validation engine.
+
+The following capabilities remain planned for later numeric releases:
+
+- Point-in-time signal generation
+- Historical scanner replay
+- Look-ahead-bias protection
+- Portfolio position simulation
+- Portfolio cash accounting
+- Entry and exit execution
+- Transaction-cost modelling
+- Slippage modelling
+- Trade-log export
+- SPY return-series alignment
+- Beta
+- Information ratio
+- Factor-combination validation
+- Complete walk-forward validation
+
+### Validation Results
+
+- Unit Tests: 186 PASS
+- Backtest Tests: 7 PASS
+- Existing regression tests: PASS
+- Ruff: Final verification required
+- MyPy: Final verification required
+
+### Release Status
+
+Backtest Metrics Foundation Complete
+
+This release establishes the performance-metrics layer required by the future portfolio simulation and walk-forward validation engine.
+
+It does not change live scanner filters, scores, ranking, TradePlan decisions or position-sizing behaviour.
+
 ## v2.7.0 Breakout Engine
 
 ### Added
