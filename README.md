@@ -1,28 +1,152 @@
-# US Stock Scanner v2.7.0
+# US Stock Scanner v2.8.0
 
-v2.7.0 introduces the Breakout Engine.
+v2.8.0 introduces the Backtest Metrics Foundation.
 
-The release adds:
+The release adds reusable performance calculations for completed trades and equity curves without changing the live scanner's production filters, scoring, TradePlan logic, candidate ranking, risk management, Excel reporting or email reporting.
 
-- Breakout55
-- DistanceToHigh55
-- Breakout diagnostics in scanner output
-- Breakout diagnostics in Excel reporting
-- Breakout diagnostics in email reporting
-- Breakout diagnostics in Top20 reporting
+The Backtest Metrics Foundation is an incremental step towards the future integrated Walk-Forward Validation Engine. It is not yet a complete portfolio backtesting engine.
 
-Breakout diagnostics are observational only.
+## Release Summary
 
-They do not affect:
+v2.8.0 adds:
 
-- Production filters
-- Score Engine
-- TradePlan logic
-- Candidate ranking
+- `scanner/backtest.py`
+- `tests/test_backtest.py`
+- `Trade` data class
+- `BacktestResult` data class
+- Trade-return calculation
+- Maximum-drawdown calculation
+- CAGR
+- Sharpe ratio
+- Sortino ratio
+- Profit factor
+- Expectancy
+- Total return
+- Benchmark-return comparison
+- Alpha
+- Consolidated metrics generation through `build_metrics`
+
+## Current Validation
+
+Latest verified validation:
+
+- Unit Tests: 186 PASS
+- Backtest Tests: 7 PASS
+- Existing regression tests: PASS
+- Ruff: Final verification required
+- MyPy: Final verification required
+
+Do not record Ruff or MyPy as passing for v2.8.0 until fresh successful command output is available.
+
+## Backtest Metrics Foundation
+
+The initial performance-analytics layer supports:
+
+- Win rate
+- Average gain
+- Average loss
+- Profit factor
+- Expectancy
+- Total return
+- CAGR
+- Sharpe ratio
+- Sortino ratio
+- Maximum drawdown
+- Benchmark return
+- Alpha
+
+### Backtest Data Classes
+
+`Trade`
+
+Represents a completed trade with:
+
+- Entry date
+- Exit date
+- Symbol
+- Entry price
+- Exit price
+- Return percentage
+
+`BacktestResult`
+
+Represents a consolidated backtest result with:
+
+- Trades
+- Equity curve
+- Performance metrics
+
+### Backtest Functions
+
+`calculate_trade_return`
+
+Calculates the percentage return between an entry price and an exit price.
+
+`calculate_max_drawdown`
+
+Calculates the largest percentage decline from a running equity peak.
+
+`calculate_cagr`
+
+Calculates compound annual growth using a 252-session trading-year assumption.
+
+`calculate_sharpe_ratio`
+
+Calculates an annualised Sharpe ratio from periodic returns.
+
+`calculate_sortino_ratio`
+
+Calculates an annualised Sortino ratio using negative returns as downside observations.
+
+`calculate_profit_factor`
+
+Calculates gross gains divided by absolute gross losses.
+
+`calculate_expectancy`
+
+Calculates expected return per trade from win rate, average gain and average loss.
+
+`build_metrics`
+
+Builds the standard backtest metrics dictionary from an equity curve, trade returns and an optional benchmark return.
+
+## Current Backtest Scope
+
+v2.8.0 provides reusable calculations for trade returns and equity curves.
+
+It does not yet include:
+
+- Point-in-time signal generation
+- Historical scanner replay
+- Explicit look-ahead-bias protection
+- Portfolio position simulation
+- Portfolio cash accounting
+- Entry and exit execution
+- Transaction-cost modelling
+- Slippage modelling
+- Trade-log export
+- SPY return-series alignment
+- Beta
+- Information ratio
+- Factor-combination validation
+- Complete walk-forward validation
+
+## Backtest Tests
+
+`tests/test_backtest.py` validates:
+
+- Positive trade returns
+- Negative trade returns
+- Floating-point comparisons using `pytest.approx`
+- Maximum drawdown
+- Profit factor
+- Expectancy
+- Required metrics
+- Alpha
 
 ## Continuous Integration
 
-Every push and pull request automatically executes:
+Every push and pull request automatically executes the configured quality checks:
 
 - Ruff lint validation
 - MyPy type checking
@@ -34,150 +158,58 @@ Quality gates:
 - Lint must pass
 - Type checking must pass
 - All tests must pass
+- Configured coverage validation must pass
+- Existing production behaviour must remain stable
 
-## Engineering Metrics
+## Versioning Policy
 
-Current quality metrics:
+The project uses sequential numeric versions.
 
-- Ruff: PASS
-- MyPy: PASS
-- Unit Tests: 179
-- Breakout Tests: 22
+Release-candidate suffixes such as `rc1` and `rc2` are not used.
 
-Coverage by module:
+Current working progression:
 
-- download.py: 100%
-- filter.py: 100%
-- indicator.py: 94%
-- risk.py: 84%
-- score.py: 81%
-- scanner.py: 99%
+- v2.8.0 Backtest Metrics Foundation
+- v2.9.0 Point-in-Time Signal Replay
+- v2.10.0 Portfolio Simulation and Trade Log
+- v2.11.0 Benchmark and Risk Analytics
+- v2.12.0 Factor Validation
+- v3.0.0 Integrated Walk-Forward Validation
 
-## Breakout Diagnostics
+Intermediate release names and scope may be adjusted when implementation requirements change.
 
-v2.7.0 introduces:
+## Preserved Production Behaviour
 
-- Breakout55
-- DistanceToHigh55
+v2.8.0 preserves:
 
-Definition:
-
-Breakout55:
-Latest close >= Highest high of the prior completed 55 sessions.
-
-DistanceToHigh55:
-(Current Price / Prior 55-session High - 1) * 100
-
-Latest-session highs are excluded from the reference window.
-
-Breakout diagnostics are exported to:
-
-- Console output
-- Candidate results
-- Top20
-- Excel reporting
+- Structured scanner outcomes
+- Production filters and filter order
+- Score Engine behaviour
+- TradePlan logic
+- Candidate ranking
+- Completed-session Volume Engine
+- Multi-timeframe Relative Strength
+- Three-state Market Regime Engine
+- Breakout diagnostics
+- ATR risk management
+- Position sizing
+- Five-sheet Excel reporting
 - Diagnostic email reporting
+- Bear-market alert behaviour
 
-Breakout diagnostics do not participate in:
+## Candidate Ranking
 
-- Filters
-- Score calculation
-- Ranking
+The production ranking order remains:
 
-This preserves the existing production engine while allowing breakout behaviour to be observed before promotion into ranking logic.
+1. TradePlan
+2. Score
+3. RiskReward
 
-## File Structure
+The Backtest Metrics Foundation does not change candidate ranking.
 
-scanner/scanner.py
-: Scan flow, diagnostics, reporting, ranking and email.
+## Production Filters
 
-scanner/download.py
-: yfinance download, S&P 500 universe and market context.
-
-scanner/indicator.py
-: Technical indicators, completed-session Volume Engine and multi-timeframe Relative Strength.
-
-scanner/filter.py
-: Existing v2.4.1 production filter rules.
-
-scanner/score.py
-: Existing v2.4.1 scoring formula.
-
-scanner/risk.py
-: ATR stops, targets and position sizing.
-
-tests/test_download.py
-: Download validation, retry outcomes, universe loading and market-context tests.
-
-tests/test_scanner.py
-: Scanner outcomes, ranking, reporting, Excel and email tests.
-
-tests/
-: Existing filter, score, risk, volume, Relative Strength and market-context tests.
-
-.github/workflows/ci.yml
-: Ruff, MyPy, pytest and coverage validation.
-
-.github/workflows/stock_scan.yml
-: Production stock-scan workflow.
-
-pyproject.toml
-: Ruff and MyPy configuration.
-
-requirements.txt
-: Runtime and test dependencies.
-
-CHANGELOG.md
-: Full project history through v2.6.0.
-
-UPGRADE_PLAN_V3.md
-: Incremental roadmap from v2.5 to v3.0.
-
-## v2.5 Relative Strength Expansion
-
-v2.4.1 calculated one 63-session Relative Strength value:
-
-```text
-RelativeStrength = Stock 63-session return - benchmark 63-session return
-```
-
-v2.5.0 retains that field unchanged and adds:
-
-```text
-RS21  = Stock 21-session return  - benchmark 21-session return
-RS63  = Stock 63-session return  - benchmark 63-session return
-RS126 = Stock 126-session return - benchmark 126-session return
-RS252 = Stock 252-session return - benchmark 252-session return
-```
-
-`RelativeStrength` remains an alias of `RS63`, so the existing filter and score behaviour remain compatible.
-
-### RSComposite
-
-The release adds an informational composite:
-
-```text
-RSComposite = 0.15 * RS21
-            + 0.50 * RS63
-            + 0.25 * RS126
-            + 0.10 * RS252
-```
-
-The composite is included in console, Excel, email and market-breadth diagnostics. It does not change production score, filter or ranking logic in v2.5.0. This separation allows the new Alpha factor to be observed before it is promoted into ranking logic.
-
-### Data History Change
-
-The default yfinance history increases from one year to two years. At least 253 observations are required to calculate a complete 252-session return.
-
-Stocks without enough history continue to use the existing `Indicator Failure` structured outcome with reason:
-
-```text
-Indicators unavailable or insufficient history
-```
-
-### Production Filters
-
-The v2.4.1 rules are unchanged:
+The production filter rules remain:
 
 - Price at least $20
 - Average volume at least 1,000,000 shares
@@ -188,48 +220,136 @@ The v2.4.1 rules are unchanged:
 - MACD not materially below signal
 - 63-session RelativeStrength at least -5
 
-## Score Engine
+## Multi-Timeframe Relative Strength
 
-v2.6.0 replace the binary Bull/Bear market bonus with a three-state RegimeScore:
+The scanner calculates:
+
+```text
+RS21  = Stock 21-session return  - benchmark 21-session return
+RS63  = Stock 63-session return  - benchmark 63-session return
+RS126 = Stock 126-session return - benchmark 126-session return
+RS252 = Stock 252-session return - benchmark 252-session return
+```
+
+`RelativeStrength` remains an alias of `RS63`, preserving existing filter and score behaviour.
+
+### RSComposite
+
+```text
+RSComposite = 0.15 * RS21
+            + 0.50 * RS63
+            + 0.25 * RS126
+            + 0.10 * RS252
+```
+
+RSComposite is included in console, Excel, email and market-breadth diagnostics.
+
+It remains observational and does not change production filters, score, TradePlan or ranking.
+
+### Data History Requirement
+
+The default price-history download is two years.
+
+At least 253 observations are required to calculate a complete 252-session return.
+
+Stocks without sufficient history use the existing `Indicator Failure` outcome with the reason:
+
+```text
+Indicators unavailable or insufficient history
+```
+
+## Three-State Market Regime Engine
+
+The scanner classifies the market as:
+
+- BULL
+- NEUTRAL
+- BEAR
+
+RegimeScore values:
 
 - BULL = 15
 - NEUTRAL = 7
 - BEAR = 0
 
-The v2.4.1 categories and thresholds are unchanged:
+`MarketScore` remains a backwards-compatible alias of `RegimeScore`.
+
+Bear protection exits the scan only when the market regime is BEAR.
+
+NEUTRAL scans continue with a reduced seven-point RegimeScore contribution.
+
+## Breakout Diagnostics
+
+The Breakout Engine provides:
+
+- Breakout55
+- DistanceToHigh55
+
+### Breakout55
+
+```text
+Latest close >= Highest high of the prior completed 55 sessions
+```
+
+### DistanceToHigh55
+
+```text
+(Current Price / Prior 55-session High - 1) * 100
+```
+
+The latest session high is excluded from the reference window.
+
+Breakout diagnostics are exported to:
+
+- Console output
+- Candidate results
+- Top20
+- Excel reporting
+- Diagnostic email reporting
+
+Breakout diagnostics remain observational and do not participate in:
+
+- Production filters
+- Score calculation
+- TradePlan logic
+- Candidate ranking
+
+## Observational Factors
+
+The following factors remain observational:
+
+- RSComposite
+- Breakout55
+- DistanceToHigh55
+
+They must not affect production filters, score, TradePlan or ranking until historical and walk-forward validation demonstrates a statistically significant improvement.
+
+## Completed-Session Volume Engine
+
+The completed-session rules remain:
+
+- Before 16:15 New York time, the current daily bar is treated as incomplete and the previous completed session is used.
+- After 16:15 New York time, or when the latest bar is from an earlier date, the latest bar is used.
+- Average volume uses the 20 sessions before the selected session.
+
+## Score Engine
+
+The Score Engine retains:
 
 - TrendScore
 - MomentumScore
 - StrengthScore based on 63-session RelativeStrength
 - VolumeScore
 - RegimeScore
-- MarketScore (backwards-compatible alias)
+- MarketScore as a backwards-compatible alias
 - ADXScore
 - RiskPenalty
 
-Multi-timeframe RS does not alter Score in v2.5.0.
-
-## Candidate Ranking
-
-The v2.4.1 order remains unchanged:
-
-1. TradePlan
-2. Score
-3. RiskReward
-
-RSComposite is output for observation but is not yet a ranking tie-breaker.
-
-## Completed-Session Volume Engine
-
-The v2.4.1 logic remains unchanged:
-
-- Before 16:15 New York time, today's daily bar is treated as incomplete and the preceding completed session is used.
-- After 16:15 New York time, or when the latest bar is from an earlier date, the latest bar is used.
-- Average volume uses the 20 sessions before the selected session.
+Multi-timeframe Relative Strength and the Backtest Metrics Foundation do not alter the production Score Engine.
 
 ## Diagnostics
 
-Structured outcomes remain:
+Structured scanner outcomes:
 
 - Passed
 - Filtered
@@ -237,17 +357,15 @@ Structured outcomes remain:
 - Indicator Failure
 - Processing Error
 
-The filter engine still records:
+The filter engine records:
 
 - First rejection reason
 - Every failed condition
 - Market breadth
 
-v2.5 adds `Non-negative RSComposite` to market breadth while keeping every existing breadth measure.
-
 ## Excel Workbook
 
-Every successful bull-market scan creates the same five worksheets:
+Every successful scan produces the same five diagnostic worksheets:
 
 1. `Top20`
 2. `Scan Summary`
@@ -255,7 +373,77 @@ Every successful bull-market scan creates the same five worksheets:
 4. `All Failed Conditions`
 5. `Market Breadth`
 
-The `Top20` sheet now includes `RS21`, `RS63`, `RS126`, `RS252` and `RSComposite`.
+The Top20 results include multi-timeframe Relative Strength and breakout diagnostic fields.
+
+## File Structure
+
+```text
+scanner/
+âââ backtest.py
+âââ download.py
+âââ filter.py
+âââ indicator.py
+âââ risk.py
+âââ scanner.py
+âââ score.py
+
+tests/
+âââ test_backtest.py
+âââ test_breakout.py
+âââ test_download.py
+âââ test_filters.py
+âââ test_indicator.py
+âââ test_main.py
+âââ test_market_context.py
+âââ test_market_regime.py
+âââ test_regime_reporting.py
+âââ test_relative_strength.py
+âââ test_risk.py
+âââ test_scanner.py
+âââ test_score.py
+âââ test_volume.py
+
+.github/workflows/
+âââ ci.yml
+âââ stock_scan.yml
+
+CHANGELOG.md
+Project.txt
+README.md
+UPGRADE_PLAN_V3.md
+pyproject.toml
+requirements.txt
+```
+
+### Main Modules
+
+`scanner/backtest.py`
+
+Backtest data structures and reusable performance calculations.
+
+`scanner/scanner.py`
+
+Scan flow, diagnostics, reporting, ranking and email.
+
+`scanner/download.py`
+
+yfinance download, S&P 500 universe and market context.
+
+`scanner/indicator.py`
+
+Technical indicators, completed-session Volume Engine, multi-timeframe Relative Strength and breakout diagnostics.
+
+`scanner/filter.py`
+
+Production filter rules.
+
+`scanner/score.py`
+
+Production scoring formula.
+
+`scanner/risk.py`
+
+ATR stops, targets and position sizing.
 
 ## Environment Variables
 
@@ -283,53 +471,116 @@ EMAIL_TO
 python -m pip install -r requirements.txt
 ```
 
-### Run
+## Run
 
 ```bash
 python scanner.py
 ```
 
-### v2.5 Validation Checklist
+## Validation Commands
 
-Before treating v2.5.0 as the new production baseline, compare it with a recent v2.4.1 run:
+```bash
+ruff check .
+python -m mypy scanner
+python -m pytest tests/ -v
+```
 
-- Stocks Scanned should remain close to the loaded universe size.
-- Data Failures should remain zero or explainably low.
-- Processing Errors should remain zero.
-- Indicator Failures may increase for stocks with fewer than 253 observations.
-- Passed/Filtered behaviour should match v2.4.1 for stocks with sufficient history.
-- Score and TradePlan should match v2.4.1 for the same market data.
-- Five Excel sheets must be generated.
-- Every Top20 row must contain all five RS fields.
-- `RelativeStrength` and `RS63` must be equal.
-- Email must include the multi-timeframe RS fields.
+Use the commands configured by the repository if its `pyproject.toml` or CI workflow specifies a different MyPy target.
 
-### v2.5.2 CI Validation Checklist
+## Next Planned Release
 
-Before releasing v2.5.2:
+v2.9.0 Point-in-Time Signal Replay
 
-- Ruff must report `All checks passed`.
-- MyPy must complete without errors.
-- All existing and new unit tests must pass.
-- Total scanner-package coverage must remain at least 50%.
-- Download tests must not perform live network requests.
-- Scanner tests must not send real email.
-- Excel export tests must create all five expected worksheets.
-- Structured outcome tests must cover Passed, Filtered, Data Failure, Indicator Failure and Processing Error.
-- Candidate ranking must remain TradePlan, Score and RiskReward.
-- RelativeStrength must remain equal to RS63.
-- Production filter and Score Engine behaviour must remain unchanged.
+Primary objective:
+
+Build the historical point-in-time signal layer before portfolio simulation.
+
+Planned scope:
+
+- Evaluate scanner conditions using historical point-in-time data
+- Generate dated historical signals
+- Prevent future data from influencing historical signals
+- Reuse existing production filters
+- Reuse existing Score Engine logic
+- Reuse existing TradePlan logic
+- Record regime and diagnostic-factor data
+- Add deterministic historical replay tests
+
+The detailed interface remains a design task for v2.9.0 and is not part of v2.8.0.
+
+## Roadmap
+
+### v2.10.0 Portfolio Simulation and Trade Log
+
+- Convert historical signals into simulated positions
+- Track portfolio cash
+- Track open and closed positions
+- Apply entry and exit rules
+- Apply position sizing
+- Generate an equity curve
+- Model transaction costs and slippage
+- Export a structured trade log
+- Connect simulation results to `build_metrics`
+
+### v2.11.0 Benchmark and Risk Analytics
+
+- Align portfolio returns with SPY returns
+- Add Beta
+- Add information ratio
+- Validate benchmark alignment
+- Export portfolio-versus-benchmark results
+
+### v2.12.0 Factor Validation
+
+- Validate RegimeScore
+- Validate RSComposite
+- Validate Breakout55
+- Validate DistanceToHigh55
+- Compare factor combinations
+- Export factor-performance reports
+
+### v3.0.0 Integrated Walk-Forward Validation
+
+- Integrate point-in-time signals
+- Integrate historical validation
+- Integrate portfolio simulation
+- Integrate trade-log export
+- Integrate SPY benchmark comparison
+- Integrate performance analytics
+- Integrate factor validation
+- Compare in-sample and out-of-sample results
+- Produce reproducible performance reports
+
+## Production Gates
+
+Every release must maintain:
+
+- Data Failures at zero or an explainably low level
+- Processing Errors at zero
+- Indicator Failures below 1%, unless a documented history requirement explains the increase
+- All five diagnostic Excel worksheets
+- Email report and attachment generation
+- Completed-session Volume Engine behaviour
+- Reproducible score and ranking for unchanged logic
+- Ruff validation
+- MyPy validation
+- Full unit-test pass
+
+If an enhancement reduces stability, it must remain disabled until validated.
 
 ## Current Release
 
-v2.7.0
-Production Ready
+v2.8.0 Backtest Metrics Foundation
 
-Validation:
-- Ruff PASS
-- MyPy PASS
-- 179 Tests PASS
+Status:
+
+- Backtest Metrics Foundation Complete
+- 186 unit tests verified as passing
+- Ruff final verification required
+- MyPy final verification required
 
 ## Disclaimer
 
-This project is research software and does not constitute financial advice. Market data may contain errors or revisions. Validate outputs independently before making any investment decision.
+This project is research software and does not constitute financial advice.
+
+Market data may contain errors or revisions. Validate outputs independently before making any investment decision.
