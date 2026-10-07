@@ -220,7 +220,7 @@ Current limitations:
 
 ## Phase 4.1: v2.9.0 Point-in-Time Signal Replay
 
-Status: Next Planned Release
+Status: Complete
 
 Primary objective:
 
@@ -271,9 +271,40 @@ Acceptance criteria:
 - MyPy must pass.
 - The complete pytest suite must pass.
 
+Verified Validation
+
+- Ruff PASS
+- MyPy PASS
+- 215 Tests PASS
+- Coverage 93.45%
+
+Implemented
+
+- HistoricalSignal
+- point_in_time_history()
+- generate_signal()
+- replay_symbol()
+- replay_universe()
+
+Production Integration
+
+- calculate_indicators()
+- run_filters()
+- calculate_score()
+- calculate_risk()
+
+Validated
+
+- Historical signal generation
+- Point-in-time replay
+- Benchmark replay
+- Deterministic replay
+- Future-row isolation
+- Production-engine integration
+
 ## Phase 4.2: v2.10.0 Portfolio Simulation and Trade Log
 
-Status: Planned
+Status: Next Planned Release
 
 Primary objective:
 
