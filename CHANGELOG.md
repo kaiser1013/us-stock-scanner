@@ -1,5 +1,114 @@
 # CHANGELOG
 
+## v2.9.0 Point-in-Time Signal Replay
+
+### Added
+
+- Added scanner/replay.py.
+- Added tests/test_replay.py.
+- Added HistoricalSignal.
+- Added point_in_time_history().
+- Added generate_signal().
+- Added replay_symbol().
+- Added replay_universe().
+- Added point-in-time benchmark return calculation.
+- Added historical signal generation.
+- Added deterministic replay support.
+- Added market-regime provider support.
+- Added production-engine integration support.
+
+### Production Engine Integration
+
+Replay now executes the production pipeline using only data available on or before the signal date:
+
+```text
+Point-in-Time History
+        ↓
+calculate_indicators()
+        ↓
+run_filters()
+        ↓
+calculate_score()
+        ↓
+calculate_risk()
+        ↓
+HistoricalSignal
+```
+
+The replay framework now reuses existing production:
+
+- Filters
+- Score Engine
+- TradePlan logic
+- Relative Strength
+- Market Regime
+- Breakout diagnostics
+- ATR Risk Engine
+
+### Added Tests
+
+Added replay-foundation tests:
+
+- Point-in-time history
+- Deterministic replay
+- HistoricalSignal validation
+- Replay symbol
+- Replay universe
+- Required signal fields
+- Future row isolation
+
+Added production-integration tests:
+
+- Indicator integration
+- Filter integration
+- Score integration
+- Risk integration
+- Benchmark return generation
+- Benchmark future-row isolation
+- Market-regime provider
+- Invalid market regime handling
+- Production pipeline failures
+- Empty replay output validation
+
+### Validation Results
+
+- Ruff: PASS
+- MyPy: PASS
+- Unit Tests: 215 PASS
+- Coverage: 93.45%
+- scanner/replay.py: 90%
+
+### Preserved
+
+- Production filters
+- Production filter order
+- Candidate ranking
+- Completed-session Volume Engine
+- Relative Strength calculations
+- Market Regime Engine
+- Breakout diagnostics
+- ATR Risk Engine
+- Excel reporting
+- Email reporting
+
+### Completed Objectives
+
+- Historical signal generation
+- Point-in-time data isolation
+- Look-ahead-bias prevention
+- Deterministic replay
+- Production-engine integration
+
+### Release Status
+
+Production Ready
+
+Current Release:
+v2.9.0 Point-in-Time Signal Replay
+
+Next Release:
+v2.10.0 Portfolio Simulation and Trade Log
+
 ## v2.8.0 Backtest Metrics Foundation
 
 ### Added
