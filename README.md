@@ -1,42 +1,67 @@
-# US Stock Scanner v2.8.0
+# US Stock Scanner v2.9.0
 
-v2.8.0 introduces the Backtest Metrics Foundation.
+## Point-in-Time Signal Replay
 
-The release adds reusable performance calculations for completed trades and equity curves without changing the live scanner's production filters, scoring, TradePlan logic, candidate ranking, risk management, Excel reporting or email reporting.
+v2.9.0 introduces the Point-in-Time Signal Replay Engine.
 
-The Backtest Metrics Foundation is an incremental step towards the future integrated Walk-Forward Validation Engine. It is not yet a complete portfolio backtesting engine.
+The replay engine generates historical signals using only information available on or before each signal date.
 
-## Release Summary
+Its primary purpose is to eliminate look-ahead bias before portfolio simulation and walk-forward validation.
 
-v2.8.0 adds:
+### Production Pipeline
 
-- `scanner/backtest.py`
-- `tests/test_backtest.py`
-- `Trade` data class
-- `BacktestResult` data class
-- Trade-return calculation
-- Maximum-drawdown calculation
-- CAGR
-- Sharpe ratio
-- Sortino ratio
-- Profit factor
-- Expectancy
-- Total return
-- Benchmark-return comparison
-- Alpha
-- Consolidated metrics generation through `build_metrics`
+```text
+Point-in-Time History
+        ↓
+calculate_indicators()
+        ↓
+run_filters()
+        ↓
+calculate_score()
+        ↓
+calculate_risk()
+        ↓
+HistoricalSignal
+```
 
-## Current Validation
+### Components
 
-Latest verified validation:
+- HistoricalSignal
+- point_in_time_history()
+- generate_signal()
+- replay_symbol()
+- replay_universe()
 
-- Unit Tests: 186 PASS
-- Backtest Tests: 7 PASS
-- Existing regression tests: PASS
-- Ruff: Final verification required
-- MyPy: Final verification required
+### Validation
 
-Do not record Ruff or MyPy as passing for v2.8.0 until fresh successful command output is available.
+- Ruff PASS
+- MyPy PASS
+- 215 Tests PASS
+- Coverage 93.45%
+
+### Validated Capabilities
+
+- Point-in-time history selection
+- Historical signal generation
+- Benchmark replay
+- Production filter integration
+- Production score integration
+- Production risk integration
+- Market-regime replay
+- Deterministic replay
+- Future-row isolation
+
+### Preserved Behaviour
+
+The replay engine does not change:
+
+- Production filters
+- Score Engine
+- TradePlan logic
+- Candidate ranking
+- Relative Strength
+- Market Regime
+- Breakout diagnostics
 
 ## Backtest Metrics Foundation
 
@@ -489,28 +514,7 @@ Use the commands configured by the repository if its `pyproject.toml` or CI work
 
 ## Next Planned Release
 
-v2.9.0 Point-in-Time Signal Replay
-
-Primary objective:
-
-Build the historical point-in-time signal layer before portfolio simulation.
-
-Planned scope:
-
-- Evaluate scanner conditions using historical point-in-time data
-- Generate dated historical signals
-- Prevent future data from influencing historical signals
-- Reuse existing production filters
-- Reuse existing Score Engine logic
-- Reuse existing TradePlan logic
-- Record regime and diagnostic-factor data
-- Add deterministic historical replay tests
-
-The detailed interface remains a design task for v2.9.0 and is not part of v2.8.0.
-
-## Roadmap
-
-### v2.10.0 Portfolio Simulation and Trade Log
+v2.10.0 Portfolio Simulation and Trade Log
 
 - Convert historical signals into simulated positions
 - Track portfolio cash
@@ -521,6 +525,8 @@ The detailed interface remains a design task for v2.9.0 and is not part of v2.8.
 - Model transaction costs and slippage
 - Export a structured trade log
 - Connect simulation results to `build_metrics`
+
+## Roadmap
 
 ### v2.11.0 Benchmark and Risk Analytics
 
@@ -570,14 +576,7 @@ If an enhancement reduces stability, it must remain disabled until validated.
 
 ## Current Release
 
-v2.8.0 Backtest Metrics Foundation
-
-Status:
-
-- Backtest Metrics Foundation Complete
-- 186 unit tests verified as passing
-- Ruff final verification required
-- MyPy final verification required
+v2.9.0
 
 ## Disclaimer
 
