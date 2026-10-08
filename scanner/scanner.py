@@ -33,7 +33,7 @@ from scanner.score import (
     calculate_score,
 )
 
-VERSION = "v2.9.0"
+VERSION = "v2.10.0"
 
 # =====================================
 # 掃描模式
