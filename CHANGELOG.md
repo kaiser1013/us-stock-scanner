@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## v2.10.0 Portfolio Simulation and Trade Log
+
+### Added
+- scanner/portfolio.py
+- tests/test_portfolio.py
+
+### Added data classes:
+- PortfolioConfig
+- PortfolioSignal
+- Position
+- ClosedTrade
+- PortfolioState
+- PortfolioResult
+
+### Added functions:
+- normalise_signal
+- open_position
+- close_position
+- mark_to_market
+- simulate_portfolio
+- export_trade_log
+
+### Validation Results
+- Ruff PASS
+- MyPy PASS
+- Unit Tests: 232 PASS
+- Coverage: 92.43%
+- scanner/portfolio.py: 90%
+
 ## v2.9.0 Point-in-Time Signal Replay
 
 ### Added
@@ -99,16 +128,6 @@ Added production-integration tests:
 - Deterministic replay
 - Production-engine integration
 
-### Release Status
-
-Production Ready
-
-Current Release:
-v2.9.0 Point-in-Time Signal Replay
-
-Next Release:
-v2.10.0 Portfolio Simulation and Trade Log
-
 ## v2.8.0 Backtest Metrics Foundation
 
 ### Added
@@ -182,7 +201,7 @@ The initial Backtest Metrics Foundation supports:
 - Preserved email reporting.
 - Preserved the observational status of RSComposite, Breakout55 and DistanceToHigh55.
 
-### Current Scope
+### Scope
 
 v2.8.0 provides reusable performance calculations for trade returns and equity curves.
 
@@ -267,7 +286,6 @@ It does not change live scanner filters, scores, ranking, TradePlan decisions or
 
 ### Release Status
 Production Ready
-
 
 ## v2.6.1 Market Regime Test Expansion
 
