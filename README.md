@@ -1,12 +1,16 @@
-# US Stock Scanner v2.9.0
+# US Stock Scanner v2.10.0
 
-## Point-in-Time Signal Replay
+## v2.10.0 Portfolio Simulation and Trade Log
 
-v2.9.0 introduces the Point-in-Time Signal Replay Engine.
-
-The replay engine generates historical signals using only information available on or before each signal date.
-
-Its primary purpose is to eliminate look-ahead bias before portfolio simulation and walk-forward validation.
+- Convert historical signals into simulated positions
+- Track portfolio cash
+- Track open and closed positions
+- Apply entry and exit rules
+- Apply position sizing
+- Generate an equity curve
+- Model transaction costs and slippage
+- Export a structured trade log
+- Connect simulation results to `build_metrics`
 
 ### Production Pipeline
 
@@ -36,8 +40,8 @@ HistoricalSignal
 
 - Ruff PASS
 - MyPy PASS
-- 215 Tests PASS
-- Coverage 93.45%
+- 232 Tests PASS
+- Coverage 92.43%
 
 ### Validated Capabilities
 
@@ -137,7 +141,13 @@ Calculates expected return per trade from win rate, average gain and average los
 
 Builds the standard backtest metrics dictionary from an equity curve, trade returns and an optional benchmark return.
 
-## Current Replay Scope
+## Historical Signal Replay (v2.9.0)
+
+v2.9.0 introduced the Point-in-Time Signal Replay Engine.
+
+The replay engine generates historical signals using only information available on or before each signal date.
+
+Its primary purpose is to eliminate look-ahead bias before portfolio simulation and walk-forward validation.
 
 v2.9.0 provides:
 
@@ -152,14 +162,11 @@ v2.9.0 provides:
 
 The following capabilities remain planned for future releases:
 
-- Portfolio simulation
-- Portfolio cash accounting
-- Trade-log export
-- Transaction-cost modelling
-- Slippage modelling
 - Beta
 - Information ratio
+- Tracking error
 - Benchmark analytics
+- Factor validation
 - Complete walk-forward validation
 
 ## Backtest Tests
@@ -200,8 +207,6 @@ Release-candidate suffixes such as `rc1` and `rc2` are not used.
 
 Current working progression:
 
-- v2.8.0 Backtest Metrics Foundation
-- v2.9.0 Point-in-Time Signal Replay
 - v2.10.0 Portfolio Simulation and Trade Log
 - v2.11.0 Benchmark and Risk Analytics
 - v2.12.0 Factor Validation
@@ -211,7 +216,7 @@ Intermediate release names and scope may be adjusted when implementation require
 
 ## Preserved Production Behaviour
 
-v2.9.0 preserves:
+v2.10.0 preserves:
 
 - Structured scanner outcomes
 - Production filters and filter order
@@ -410,33 +415,38 @@ The Top20 results include multi-timeframe Relative Strength and breakout diagnos
 
 ```text
 scanner/
-âââ backtest.py
-âââ download.py
-âââ filter.py
-âââ indicator.py
-âââ risk.py
-âââ scanner.py
-âââ score.py
+backtest.py
+download.py
+filter.py
+indicator.py
+portfolio.py
+replay.py
+risk.py
+scanner.py
+score.py
 
 tests/
-âââ test_backtest.py
-âââ test_breakout.py
-âââ test_download.py
-âââ test_filters.py
-âââ test_indicator.py
-âââ test_main.py
-âââ test_market_context.py
-âââ test_market_regime.py
-âââ test_regime_reporting.py
-âââ test_relative_strength.py
-âââ test_risk.py
-âââ test_scanner.py
-âââ test_score.py
-âââ test_volume.py
+test_backtest.py
+test_breakout.py
+test_download.py
+test_filters.py
+test_indicator.py
+test_main.py
+test_market_context.py
+test_market_regime.py
+test_portfolio.py
+test_regime_reporting.py
+test_relative_strength.py
+test_replay.py
+test_risk.py
+test_scanner.py
+test_score.py
+test_volume.py
 
 .github/workflows/
-âââ ci.yml
-âââ stock_scan.yml
+ci.yml
+stock_scan.yml
+tests.yml
 
 CHANGELOG.md
 Project.txt
@@ -475,6 +485,14 @@ Production scoring formula.
 `scanner/risk.py`
 
 ATR stops, targets and position sizing.
+
+`scanner/portfolio.py`
+ 
+Deterministic portfolio simulation, cash accounting, position tracking, transaction costs, slippage, equity-curve generation and structured trade-log export.
+
+`scanner/replay.py`
+
+Point-in-time historical signal generation and production-engine replay.
 
 ## Environment Variables
 
@@ -520,20 +538,6 @@ Use the commands configured by the repository if its `pyproject.toml` or CI work
 
 ## Next Planned Release
 
-v2.10.0 Portfolio Simulation and Trade Log
-
-- Convert historical signals into simulated positions
-- Track portfolio cash
-- Track open and closed positions
-- Apply entry and exit rules
-- Apply position sizing
-- Generate an equity curve
-- Model transaction costs and slippage
-- Export a structured trade log
-- Connect simulation results to `build_metrics`
-
-## Roadmap
-
 ### v2.11.0 Benchmark and Risk Analytics
 
 - Align portfolio returns with SPY returns
@@ -541,6 +545,8 @@ v2.10.0 Portfolio Simulation and Trade Log
 - Add information ratio
 - Validate benchmark alignment
 - Export portfolio-versus-benchmark results
+
+## Roadmap
 
 ### v2.12.0 Factor Validation
 
@@ -582,7 +588,7 @@ If an enhancement reduces stability, it must remain disabled until validated.
 
 ## Current Release
 
-v2.9.0
+v2.10.0
 
 ## Disclaimer
 
