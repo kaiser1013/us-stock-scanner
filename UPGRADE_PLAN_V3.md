@@ -363,7 +363,7 @@ Verified Validation
 
 ## Phase 4.3: v2.11.0 Benchmark and Risk Analytics
 
-Status: Planned
+Status: Complete
 
 Primary objective:
 
@@ -387,36 +387,74 @@ Acceptance criteria:
 - Beta and information ratio must be covered by unit tests.
 - Benchmark calculations must be reproducible.
 
-## Phase 4.4: v2.12.0 Factor Validation
+Verified Validation
 
-Status: Planned
+- Ruff PASS
+- MyPy PASS
+- 258 Tests PASS
+- Coverage 92.36%
 
-Primary objective:
+### Phase 4.4: v2.12.0 Factor Validation
 
-Evaluate observational factors before any production promotion decision.
+Status: Complete
 
-Factors to validate:
+Implemented
+
+- scanner/factor_validation.py
+- tests/test_factor_validation.py
+
+Implemented Data Classes
+
+- FactorDefinition
+- FactorResult
+
+Implemented Functions
+
+- validate_factor()
+- compare_factor_groups()
+- validate_factor_combinations()
+- validate_by_regime()
+- build_factor_validation_report()
+- export_factor_validation_report()
+
+Validated Factors
 
 - RegimeScore
 - RSComposite
 - Breakout55
 - DistanceToHigh55
 
-Planned scope:
+Validated Capabilities
 
-- Measure factor performance individually.
-- Compare factor combinations.
-- Compare performance across market regimes.
-- Compare portfolio results with and without each factor.
-- Export factor-performance reports.
-- Document sample size and evaluation period.
-- Keep factors observational unless promotion gates are satisfied.
+- Individual factor evaluation
+- Factor-on vs factor-off analysis
+- Factor-combination analysis
+- Market-regime analysis
+- Benchmark-aware analysis
+- Sample-size reporting
+- Evaluation-period reporting
 
-Factor validation must not automatically change filters, score, TradePlan or ranking.
+Verified Validation
+
+- Ruff PASS
+- MyPy PASS
+- 271 Tests PASS
+- Coverage 92.36%
+- scanner/factor_validation.py 92%
+
+Preserved
+
+- Production Filters
+- Score Engine
+- TradePlan
+- Candidate Ranking
+
+Factor Validation remains observational.
+No factor is promoted into production logic.
 
 ## Phase 5: v3.0.0 Integrated Walk-Forward Validation
 
-Status: Planned Major Release
+Status: Next Major Release
 
 Primary objective:
 
