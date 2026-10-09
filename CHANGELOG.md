@@ -1,5 +1,101 @@
 # CHANGELOG
 
+## v2.12.0 Factor Validation
+
+### Added
+
+- scanner/factor_validation.py
+- tests/test_factor_validation.py
+
+### Added Data Classes
+
+- FactorDefinition
+- FactorResult
+
+### Added Functions
+
+- validate_factor
+- compare_factor_groups
+- validate_factor_combinations
+- validate_by_regime
+- build_factor_validation_report
+- export_factor_validation_report
+
+### Added Capabilities
+
+- Individual factor evaluation
+- Factor-on vs factor-off comparison
+- Factor combination analysis
+- Market-regime analysis
+- Benchmark-aware factor evaluation
+- Sample-size reporting
+- Evaluation-period reporting
+- Excel factor-report export
+- CSV factor-report export
+
+### Validated Factors
+
+- RegimeScore
+- RSComposite
+- Breakout55
+- DistanceToHigh55
+
+### Preserved
+
+- Production filters
+- Production filter order
+- Score Engine behaviour
+- TradePlan logic
+- Candidate ranking
+- Market Regime Engine
+- Replay Engine
+- Portfolio Simulation
+- Benchmark Analytics
+- Risk Engine
+
+### Validation Results
+
+- Ruff PASS
+- MyPy PASS
+- Unit Tests: 271 PASS
+- Coverage: 92.36%
+- scanner/factor_validation.py: 92%
+
+### Release Status
+
+Complete
+
+## v2.11.0 Benchmark and Risk Analytics
+
+### Added
+
+- scanner/benchmark.py
+- tests/test_benchmark.py
+
+### Added Data Classes
+
+- BenchmarkConfig
+- BenchmarkResult
+
+### Added Functions
+
+- align_value_series
+- align_return_series
+- calculate_return_series
+- calculate_beta
+- calculate_tracking_error
+- calculate_information_ratio
+- calculate_total_return
+- build_benchmark_metrics
+
+### Validation Results
+
+- Ruff PASS
+- MyPy PASS
+- Unit Tests: 258 PASS
+- Coverage: 92.36%
+- scanner/benchmark.py: 92%
+
 ## v2.10.0 Portfolio Simulation and Trade Log
 
 ### Added
