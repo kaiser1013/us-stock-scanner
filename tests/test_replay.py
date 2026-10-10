@@ -140,7 +140,7 @@ def make_score_result(
 
     return {
         "Score": 84.0,
-        "Signal": "ð¢ BUY",
+        "Signal": "簸??瞽 BUY",
         "TrendScore": 30,
         "MomentumScore": 20,
         "StrengthScore": 8,
@@ -165,7 +165,7 @@ def make_risk_result() -> dict[str, Any]:
         "PositionShares": 33,
         "CapitalRequired": 5_775.0,
         "PlannedRiskAmount": 99.0,
-        "TradePlan": "â ACTIONABLE",
+        "TradePlan": "璽?? ACTIONABLE",
     }
 
 
@@ -459,7 +459,7 @@ def test_historical_signal_to_dict():
             "2024-01-05"
         ),
         score=80.0,
-        trade_plan="â ACTIONABLE",
+        trade_plan="璽?? ACTIONABLE",
     )
 
     assert signal is not None
@@ -475,7 +475,7 @@ def test_historical_signal_to_dict():
     assert result["Score"] == 80.0
     assert (
         result["TradePlan"]
-        == "â ACTIONABLE"
+        == "璽?? ACTIONABLE"
     )
 
 
@@ -652,7 +652,7 @@ def test_evaluate_production_snapshot_uses_all_engines(
     assert result["RiskReward"] == 2.0
     assert (
         result["TradePlan"]
-        == "â ACTIONABLE"
+        == "璽?? ACTIONABLE"
     )
 
 
@@ -833,10 +833,10 @@ def test_generate_signal_runs_production_integration(
 
     assert result is not None
     assert result.score == 84.0
-    assert result.signal == "ð¢ BUY"
+    assert result.signal == "簸??瞽 BUY"
     assert (
         result.trade_plan
-        == "â ACTIONABLE"
+        == "璽?? ACTIONABLE"
     )
     assert result.risk_reward == 2.0
     assert result.market_regime == "BULL"
@@ -1012,3 +1012,46 @@ def test_production_integration_returns_none_for_short_benchmark():
     )
 
     assert result is None
+
+def test_manual_signal_preserves_portfolio_risk_fields():
+    history = make_history()
+    result = generate_signal(
+        ticker="AAPL",
+        history=history,
+        signal_date=pd.Timestamp("2024-01-05"),
+        position_shares=10,
+        stop_loss=95.0,
+        take_profit_1=107.5,
+        take_profit_2=110.0,
+    )
+    assert result is not None
+    assert result.position_shares == 10
+    assert result.stop_loss == pytest.approx(95.0)
+    assert result.take_profit_1 == pytest.approx(107.5)
+    assert result.take_profit_2 == pytest.approx(110.0)
+
+
+def test_replay_output_is_native_portfolio_contract(monkeypatch: pytest.MonkeyPatch):
+    history = make_long_history()
+    benchmark = make_long_history(base_price=400.0, daily_increment=0.1)
+    monkeypatch.setattr(
+        replay_module,
+        "evaluate_production_snapshot",
+        lambda **kwargs: {
+            **make_production_metrics(kwargs["ticker"]),
+            **make_score_result(kwargs["market_regime"]),
+            **make_risk_result(),
+        },
+    )
+    signal_date = history.index[252]
+    result = replay_universe(
+        {"AAPL": history},
+        signal_date,
+        signal_date,
+        benchmark_history=benchmark,
+    )
+    assert list(result.columns) == SIGNAL_COLUMNS
+    assert result.loc[0, "PositionShares"] == 33
+    assert result.loc[0, "StopLoss"] == pytest.approx(172.0)
+    assert result.loc[0, "TakeProfit1"] == pytest.approx(179.5)
+    assert result.loc[0, "TakeProfit2"] == pytest.approx(181.0)
