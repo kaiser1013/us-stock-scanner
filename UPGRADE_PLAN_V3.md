@@ -454,27 +454,81 @@ No factor is promoted into production logic.
 
 ## Phase 5: v3.0.0 Integrated Walk-Forward Validation
 
-Status: Next Major Release
+Status: Complete
 
-Primary objective:
+Primary objective:  
+Integrate the completed validation layers into a reproducible walk-forward framework while preserving the production scanner.
 
-Integrate the completed validation layers into a reproducible walk-forward framework.
+Implemented:
+- Added `scanner/walkforward.py`.
+- Added `tests/test_walkforward.py`.
+- Added rolling and expanding walk-forward windows.
+- Added configurable train, test and step lengths.
+- Added complete-test-period enforcement.
+- Added deterministic train/test execution.
+- Added out-of-sample consistency, return, Sharpe and Alpha summaries.
+- Added Excel and CSV walk-forward reports.
 
-Planned scope:
+Integrated engine flow:
 
-- Integrate point-in-time signals.
-- Integrate historical signal validation.
-- Integrate portfolio simulation.
-- Integrate trade-log export.
-- Integrate SPY benchmark comparison.
-- Integrate performance analytics.
-- Integrate factor validation.
-- Evaluate sequential historical windows.
-- Separate in-sample and out-of-sample evaluation.
-- Produce reproducible performance reports.
-- Document any validated production changes.
+```text
+replay_universe()
+    ↓
+simulate_portfolio()
+    ↓
+build_benchmark_metrics()
+    ↓
+build_metrics()
+    ↓
+build_factor_validation_report()
+```
 
-v3.0.0 is complete only when the historical signal engine, portfolio simulation, benchmark analytics and walk-forward evaluation operate together.
+Native Replay-to-Portfolio contract:
+- Added `PositionShares` to `HistoricalSignal` and replay output.
+- Added `StopLoss` to `HistoricalSignal` and replay output.
+- Added `TakeProfit1` to `HistoricalSignal` and replay output.
+- Added `TakeProfit2` to `HistoricalSignal` and replay output.
+- Preserved production Risk Engine values through replay.
+- Enabled replay mappings to satisfy `PortfolioSignal`.
+
+Implemented public APIs:
+- `generate_windows()`
+- `run_walkforward_window()`
+- `run_walkforward()`
+- `evaluate_real_engines()`
+- `run_walkforward_strategy()`
+- `build_walkforward_summary()`
+- `build_walkforward_report()`
+- `export_walkforward_report()`
+
+Walk-forward report sections:
+- Summary
+- Windows
+- Benchmark
+- Factor Validation
+
+Verified validation:
+- Ruff PASS
+- MyPy PASS
+- 291 Tests PASS
+- Coverage 92.71%
+- `scanner/walkforward.py` 95%
+- `scanner/replay.py` 90%
+
+Preserved:
+- Production filters and filter order
+- Score Engine behaviour
+- TradePlan logic
+- Candidate ranking
+- Completed-session Volume Engine
+- Relative Strength calculations
+- Market Regime behaviour
+- Risk Engine behaviour
+- Excel output
+- Email behaviour
+
+Completion statement:  
+v3.0.0 is complete because historical replay, the native replay-to-portfolio contract, portfolio simulation, performance metrics, benchmark analytics, factor validation and sequential walk-forward evaluation operate through one integrated framework.
 
 ## Required Backtest Metrics
 
