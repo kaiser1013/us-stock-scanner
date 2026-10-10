@@ -33,6 +33,10 @@ class HistoricalSignal:
 
     trade_plan: str
     risk_reward: float
+    position_shares: int
+    stop_loss: float
+    take_profit_1: float
+    take_profit_2: float
 
     market_regime: str
     regime_score: float
@@ -55,6 +59,10 @@ SIGNAL_COLUMNS = [
     "Signal",
     "TradePlan",
     "RiskReward",
+    "PositionShares",
+    "StopLoss",
+    "TakeProfit1",
+    "TakeProfit2",
     "MarketRegime",
     "RegimeScore",
     "RS21",
@@ -362,6 +370,12 @@ def _build_historical_signal(
         risk_reward=_as_float(
             values.get("RiskReward")
         ),
+        position_shares=int(
+            _as_float(values.get("PositionShares"))
+        ),
+        stop_loss=_as_float(values.get("StopLoss")),
+        take_profit_1=_as_float(values.get("TakeProfit1")),
+        take_profit_2=_as_float(values.get("TakeProfit2")),
         market_regime=_as_string(
             values.get("MarketRegime")
         ),
@@ -418,6 +432,10 @@ def generate_signal(
     signal: str = "",
     trade_plan: str = "",
     risk_reward: float = 0.0,
+    position_shares: int = 0,
+    stop_loss: float = 0.0,
+    take_profit_1: float = 0.0,
+    take_profit_2: float = 0.0,
     regime_score: float = 0.0,
     rs21: float = 0.0,
     rs63: float = 0.0,
@@ -502,6 +520,10 @@ def generate_signal(
         "Signal": signal,
         "TradePlan": trade_plan,
         "RiskReward": risk_reward,
+        "PositionShares": position_shares,
+        "StopLoss": stop_loss,
+        "TakeProfit1": take_profit_1,
+        "TakeProfit2": take_profit_2,
         "MarketRegime": market_regime,
         "RegimeScore": regime_score,
         "RS21": rs21,
@@ -615,6 +637,16 @@ def historical_signal_to_dict(
         ),
         "RiskReward": (
             historical_signal.risk_reward
+        ),
+        "PositionShares": (
+            historical_signal.position_shares
+        ),
+        "StopLoss": historical_signal.stop_loss,
+        "TakeProfit1": (
+            historical_signal.take_profit_1
+        ),
+        "TakeProfit2": (
+            historical_signal.take_profit_2
         ),
         "MarketRegime": (
             historical_signal.market_regime
