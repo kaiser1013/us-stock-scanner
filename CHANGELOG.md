@@ -1,3 +1,87 @@
+## CHANGELOG
+
+### v3.0.0 Integrated Walk-Forward Validation
+
+#### Added
+- `scanner/walkforward.py`
+- `tests/test_walkforward.py`
+- Rolling and expanding window generation
+- Integrated train/test evaluation
+- Walk-forward summaries
+- Excel and CSV report export
+
+#### Added Data Classes
+- `WalkForwardConfig`
+- `WalkForwardWindow`
+- `EvaluationResult`
+- `WalkForwardResult`
+- `WalkForwardSummary`
+
+#### Added Functions
+- `generate_windows()`
+- `run_walkforward_window()`
+- `run_walkforward()`
+- `evaluate_real_engines()`
+- `run_walkforward_strategy()`
+- `build_walkforward_summary()`
+- `results_to_frame()`
+- `factor_results_to_frame()`
+- `build_walkforward_report()`
+- `export_walkforward_report()`
+
+#### Integrated Engines
+- Point-in-time signal replay
+- Deterministic portfolio simulation
+- Structured trade-log processing
+- Backtest metrics
+- SPY benchmark analytics
+- Observational factor validation
+
+#### Replay-to-Portfolio Native Contract
+Expanded `HistoricalSignal` and replay output with:
+- `PositionShares`
+- `StopLoss`
+- `TakeProfit1`
+- `TakeProfit2`
+
+Replay now carries the production Risk Engine values required by `PortfolioSignal` and `simulate_portfolio()` without synthetic risk values.
+
+#### Walk-Forward Capabilities
+- Configurable training, testing and rolling-step lengths
+- Rolling windows
+- Expanding training windows
+- Complete-test-period enforcement
+- Chronological train/test separation
+- Deterministic window ordering
+- Per-window training and testing metrics
+- Out-of-sample consistency score
+- Average, best and worst test-return summaries
+- Average test Sharpe ratio and Alpha
+- Summary, Windows, Benchmark and Factor Validation report tables
+
+#### Preserved
+- Production filters and filter order
+- Score Engine behaviour
+- TradePlan logic
+- Candidate ranking by TradePlan, Score and RiskReward
+- Completed-session Volume Engine
+- RelativeStrength = RS63 compatibility
+- Three-state Market Regime Engine
+- ATR risk calculations and position sizing
+- Observational status of RSComposite, Breakout55 and DistanceToHigh55
+- Production Excel and email reporting
+
+#### Validation Results
+- Ruff PASS
+- MyPy PASS
+- Unit Tests: 291 PASS
+- Total Coverage: 92.71%
+- `scanner/walkforward.py`: 95%
+- `scanner/replay.py`: 90%
+
+#### Release Status
+Complete
+
 # CHANGELOG
 
 ## v2.12.0 Factor Validation
