@@ -1,0 +1,299 @@
+PROJECT CONTEXT
+===============
+
+Project:
+US Stock Scanner
+
+Purpose of This File:
+This is the compact source of context for future Copilot conversations.
+Use it together with README.md, CHANGELOG.md and UPGRADE_PLAN_V3.md when detailed implementation history is required.
+
+CURRENT RELEASE
+===============
+
+Current Release:
+v3.0.0 Integrated Walk-Forward Validation
+
+Release Status:
+Complete
+
+Latest Verified Validation:
+- Ruff PASS
+- MyPy PASS
+- Unit Tests: 291 PASS
+- Coverage: 92.71%
+- scanner/walkforward.py: 95%
+- scanner/replay.py: 90%
+
+VERSIONING POLICY
+=================
+
+Use sequential numeric versions.
+Do not use release-candidate suffixes such as rc, alpha or beta.
+
+COMPLETED RELEASES
+==================
+
+- v2.5.0 Multi-Timeframe Relative Strength
+- v2.5.1 Stability and CI Release
+- v2.5.2 Test Coverage Expansion
+- v2.5.3 Indicator Hardening Release
+- v2.6.0 Three-State Market Regime Engine
+- v2.6.1 Market Regime Test Expansion
+- v2.7.0 Breakout Engine
+- v2.8.0 Backtest Metrics Foundation
+- v2.9.0 Point-in-Time Signal Replay
+- v2.10.0 Portfolio Simulation and Trade Log
+- v2.11.0 Benchmark and Risk Analytics
+- v2.12.0 Factor Validation
+- v3.0.0 Integrated Walk-Forward Validation
+
+PRODUCTION FOUNDATION
+=====================
+
+Production behaviour to preserve:
+
+- Structured diagnostic outcomes
+- Production filters and filter order
+- Score Engine behaviour
+- TradePlan logic
+- Candidate ranking
+- Completed-session Volume Engine
+- Relative Strength calculations
+- Three-state Market Regime Engine
+- ATR risk management
+- Position sizing
+- Five-sheet Excel diagnostic workbook
+- Diagnostic email reporting
+- Bear-market alert behaviour
+
+Candidate ranking remains:
+
+TradePlan -> Score -> RiskReward
+
+PRODUCTION FILTERS
+==================
+
+- Price at least $20
+- Average volume at least 1,000,000 shares
+- Price at or above MA20
+- MA20 at or above MA50
+- RSI between 40 and 80
+- Completed-session VolumeRatio at least 0.8
+- MACD not materially below its signal line
+- 63-session RelativeStrength at least -5
+
+RELATIVE STRENGTH
+=================
+
+Available fields:
+
+- RS21
+- RS63
+- RS126
+- RS252
+- RSComposite
+
+Compatibility rule:
+RelativeStrength remains equal to RS63.
+
+RSComposite formula:
+
+RSComposite = 0.15 * RS21
+            + 0.50 * RS63
+            + 0.25 * RS126
+            + 0.10 * RS252
+
+MARKET REGIME ENGINE
+====================
+
+- BULL = RegimeScore 15
+- NEUTRAL = RegimeScore 7
+- BEAR = RegimeScore 0
+
+MarketScore remains an alias of RegimeScore.
+
+OBSERVATIONAL FACTOR POLICY
+===========================
+
+The following remain observational:
+
+- RSComposite
+- Breakout55
+- DistanceToHigh55
+
+They must not affect production filters, Score Engine, TradePlan or candidate ranking without a separately validated production change.
+
+V3.0.0 INTEGRATED WALK-FORWARD VALIDATION
+=========================================
+
+New Files:
+
+- scanner/walkforward.py
+- tests/test_walkforward.py
+
+Main Data Classes:
+
+- WalkForwardConfig
+- WalkForwardWindow
+- EvaluationResult
+- WalkForwardResult
+- WalkForwardSummary
+
+Main APIs:
+
+- generate_windows()
+- run_walkforward_window()
+- run_walkforward()
+- evaluate_real_engines()
+- run_walkforward_strategy()
+- build_walkforward_summary()
+- build_walkforward_report()
+- export_walkforward_report()
+
+Default Window Design:
+
+- 3-year training period
+- 1-year testing period
+- 1-year rolling step
+
+Supported Window Modes:
+
+- Rolling
+- Expanding training period
+
+Integrated Flow:
+
+replay_universe()
+    -> simulate_portfolio()
+    -> build_benchmark_metrics()
+    -> build_metrics()
+    -> build_factor_validation_report()
+    -> EvaluationResult
+    -> WalkForwardResult
+    -> WalkForwardSummary
+
+Native Replay-to-Portfolio Contract:
+
+HistoricalSignal and replay output preserve:
+
+- PositionShares
+- StopLoss
+- TakeProfit1
+- TakeProfit2
+
+These values originate from the production Risk Engine and are consumed by PortfolioSignal and simulate_portfolio().
+
+Walk-Forward Summary:
+
+- Window count
+- Profitable window count
+- Consistency score
+- Average test return
+- Average test Sharpe ratio
+- Average test Alpha
+- Best test return
+- Worst test return
+
+Walk-Forward Report Sections:
+
+- Summary
+- Windows
+- Benchmark
+- Factor Validation
+
+RESEARCH MODULES
+================
+
+Backtest:
+- Win rate
+- Average gain and loss
+- Profit factor
+- Expectancy
+- Total return
+- CAGR
+- Sharpe ratio
+- Sortino ratio
+- Maximum drawdown
+- Benchmark return
+- Alpha
+
+Portfolio:
+- Cash and position accounting
+- Next-session entry
+- Stop, target, time and end-of-data exits
+- Transaction costs and slippage
+- Equity curve
+- Trade-log export
+
+Benchmark:
+- Aligned portfolio and SPY values
+- Alpha
+- Beta
+- Tracking error
+- Information ratio
+
+Factor Validation:
+- RegimeScore
+- RSComposite
+- Breakout55
+- DistanceToHigh55
+- Individual, comparison, combination and regime analysis
+
+REPORTING AND DIAGNOSTICS
+=========================
+
+Structured scanner outcomes:
+
+- Passed
+- Filtered
+- Data Failure
+- Indicator Failure
+- Processing Error
+
+Production diagnostic workbook:
+
+1. Top20
+2. Scan Summary
+3. First Rejections
+4. All Failed Conditions
+5. Market Breadth
+
+ENGINEERING AND RELEASE GATES
+=============================
+
+Required checks before completing a release:
+
+1. Confirm implemented scope.
+2. Run Ruff.
+3. Run MyPy.
+4. Run the complete pytest suite.
+5. Record only verified results.
+6. Update Project.txt, README.md, CHANGELOG.md and UPGRADE_PLAN_V3.md consistently.
+
+DOCUMENTATION RESPONSIBILITIES
+==============================
+
+Project.txt
+- Compact context for future conversations
+
+README.md
+- Current architecture, behaviour and operation
+
+CHANGELOG.md
+- Version history and verified validation results
+
+UPGRADE_PLAN_V3.md
+- Completed incremental roadmap, production gates and promotion rules
+
+FUTURE-CONVERSATION STARTING INSTRUCTION
+========================================
+
+Read Project.txt as the primary project context. Preserve the production engine and sequential numeric versioning. Use README.md, CHANGELOG.md and UPGRADE_PLAN_V3.md when detailed history is needed. Before marking a new release complete, run Ruff, MyPy and the complete pytest suite, then update all four documentation files consistently.
+
+DISCLAIMER
+==========
+
+This project is research software and does not constitute financial advice.
+Market data may contain errors or revisions.
+Validate outputs independently before making any investment decision.
